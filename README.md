@@ -41,19 +41,21 @@ docker build -t cware-hil-ui . && docker run -d -p 8080:80 cware-hil-ui
 docker pull ghcr.io/kiliansen/cware-hil-ui:latest
 ```
 
-### Full stack (UI + hub)
+### Full stack (UI + hub) on one port
 
-`docker-compose.full.yml` brings up the hub ([cware-hil-mcp](https://github.com/KilianSen/cware-hil-mcp),
-built from its repo) alongside the UI:
+`docker-compose.full.yml` runs the hub ([cware-hil-mcp](https://github.com/KilianSen/cware-hil-mcp),
+built from its repo), this UI, and an nginx proxy that fronts both on a **single
+port** (`proxy.conf`): `/` → UI, `/mcp` · `/bridge` · `/health` → hub.
 
 ```bash
 export CC_HITL_TOKEN=$(openssl rand -hex 24)
 docker compose -f docker-compose.full.yml up -d --build
 ```
 
-Open http://localhost:8080 and paste the same `CC_HITL_TOKEN` in the top bar (host
-and port default to this machine + 22360, which the hub publishes). See the file's
-header for the security notes on exposing it beyond a trusted network.
+Open http://localhost:22360 and paste `CC_HITL_TOKEN` — host/port default to this
+origin, so the dashboard connects with **no other config**. Agents connect at
+`http://localhost:22360/mcp`. Serving this over https makes the bridge same-origin
+`wss`, so there's no mixed-content problem. See the compose header for security notes.
 
 It's a static SPA, so it can equally be dropped on any static host (Netlify,
 GitHub Pages, an S3 bucket, …).

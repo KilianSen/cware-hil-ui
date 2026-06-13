@@ -1,25 +1,25 @@
-# Full stack: the hub (cware-hil-mcp) + this UI, one command.
+# Full stack on a SINGLE port: an nginx proxy fronts both the hub
+# (cware-hil-mcp) and this UI, so /, /mcp, /bridge and /health all live on
+# http://localhost:22360.
 #
 #   export CC_HITL_TOKEN=$(openssl rand -hex 24)
 #   docker compose -f docker-compose.full.yml up -d --build
 #
-# Then open http://localhost:8080 and paste the same CC_HITL_TOKEN into the top
-# bar (host/port default to this machine + 22360, which the hub publishes below).
+# Open http://localhost:22360 and paste CC_HITL_TOKEN in the top bar — host/port
+# default to this origin (localhost:22360), so the dashboard connects with no
+# other config. Agents connect at http://localhost:22360/mcp.
 
 services:
   hub:
-    # Built straight from the hub repo (no need for a published image).
-    # Pin a release with "...cware-hil-mcp.git#v0.2.1" if you want.
+    # Built straight from the hub repo. Pin a release with "...#v0.2.1" if you want.
     build: https://github.com/KilianSen/cware-hil-mcp.git
     image: cware-hil-mcp
     environment:
       CC_HITL_TOKEN: "${CC_HITL_TOKEN:?set CC_HITL_TOKEN in your shell or a .env file}"
       CC_HITL_HOST: "0.0.0.0"
       CC_HITL_PORT: "22360"
-    ports:
-      # The browser connects here, so it must be reachable from where you open
-      # the UI. Restrict to "127.0.0.1:22360:22360" for local-only use.
-      - "22360:22360"
+    expose:
+      - "22360" # internal only — reached through the proxy
     volumes:
       - hub-data:/data
     restart: unless-stopped
@@ -27,15 +27,27 @@ services:
   ui:
     build: .
     image: cware-hil-ui
+    expose:
+      - "80" # internal only — reached through the proxy
+    restart: unless-stopped
+
+  proxy:
+    image: nginx:alpine
+    volumes:
+      - ./proxy.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - "8080:80"
+      # The one published port. Restrict to "127.0.0.1:22360:80" for local-only use.
+      - "22360:80"
+    depends_on:
+      - ui
+      - hub
     restart: unless-stopped
 
 volumes:
   hub-data:
 
-# Security: the hub is published on all interfaces here so the UI can reach it
-# from another machine — the bearer token is then the only thing guarding /mcp
-# and /bridge. Use a strong CC_HITL_TOKEN and a TLS reverse proxy before exposing
-# this beyond a trusted network. (Serving the UI over https also requires the hub
-# behind TLS/wss, or the browser blocks the bridge WebSocket as mixed content.)
+# Security: everything is published on one port; the hub's bearer token is the
+# only thing guarding /mcp and /bridge once this is reachable off localhost. Use a
+# strong CC_HITL_TOKEN and a TLS reverse proxy in front before exposing it beyond a
+# trusted network. Serving over https here means the bridge is same-origin wss, so
+# no mixed-content problem.
