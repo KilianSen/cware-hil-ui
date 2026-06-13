@@ -41,6 +41,20 @@ docker build -t cware-hil-ui . && docker run -d -p 8080:80 cware-hil-ui
 docker pull ghcr.io/kiliansen/cware-hil-ui:latest
 ```
 
+### Full stack (UI + hub)
+
+`docker-compose.full.yml` brings up the hub ([cware-hil-mcp](https://github.com/KilianSen/cware-hil-mcp),
+built from its repo) alongside the UI:
+
+```bash
+export CC_HITL_TOKEN=$(openssl rand -hex 24)
+docker compose -f docker-compose.full.yml up -d --build
+```
+
+Open http://localhost:8080 and paste the same `CC_HITL_TOKEN` in the top bar (host
+and port default to this machine + 22360, which the hub publishes). See the file's
+header for the security notes on exposing it beyond a trusted network.
+
 It's a static SPA, so it can equally be dropped on any static host (Netlify,
 GitHub Pages, an S3 bucket, …).
 

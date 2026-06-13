@@ -1,0 +1,41 @@
+# Full stack: the hub (cware-hil-mcp) + this UI, one command.
+#
+#   export CC_HITL_TOKEN=$(openssl rand -hex 24)
+#   docker compose -f docker-compose.full.yml up -d --build
+#
+# Then open http://localhost:8080 and paste the same CC_HITL_TOKEN into the top
+# bar (host/port default to this machine + 22360, which the hub publishes below).
+
+services:
+  hub:
+    # Built straight from the hub repo (no need for a published image).
+    # Pin a release with "...cware-hil-mcp.git#v0.2.1" if you want.
+    build: https://github.com/KilianSen/cware-hil-mcp.git
+    image: cware-hil-mcp
+    environment:
+      CC_HITL_TOKEN: "${CC_HITL_TOKEN:?set CC_HITL_TOKEN in your shell or a .env file}"
+      CC_HITL_HOST: "0.0.0.0"
+      CC_HITL_PORT: "22360"
+    ports:
+      # The browser connects here, so it must be reachable from where you open
+      # the UI. Restrict to "127.0.0.1:22360:22360" for local-only use.
+      - "22360:22360"
+    volumes:
+      - hub-data:/data
+    restart: unless-stopped
+
+  ui:
+    build: .
+    image: cware-hil-ui
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  hub-data:
+
+# Security: the hub is published on all interfaces here so the UI can reach it
+# from another machine — the bearer token is then the only thing guarding /mcp
+# and /bridge. Use a strong CC_HITL_TOKEN and a TLS reverse proxy before exposing
+# this beyond a trusted network. (Serving the UI over https also requires the hub
+# behind TLS/wss, or the browser blocks the bridge WebSocket as mixed content.)

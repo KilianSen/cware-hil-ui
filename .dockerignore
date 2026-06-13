@@ -5,6 +5,6 @@ dist
 .DS_Store
 Dockerfile
 .dockerignore
-docker-compose.yml
+docker-compose*.yml
 README.md
 *.tsbuildinfo
