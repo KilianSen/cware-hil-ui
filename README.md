@@ -41,21 +41,26 @@ docker build -t cware-hil-ui . && docker run -d -p 8080:80 cware-hil-ui
 docker pull ghcr.io/kiliansen/cware-hil-ui:latest
 ```
 
-### Full stack (UI + hub) on one port
+### Full stack (UI + hub) on one port — Portainer-ready
 
-`docker-compose.full.yml` runs the hub ([cware-hil-mcp](https://github.com/KilianSen/cware-hil-mcp),
-built from its repo), this UI, and an nginx proxy that fronts both on a **single
-port** (`proxy.conf`): `/` → UI, `/mcp` · `/bridge` · `/health` → hub.
+`docker-compose.full.yml` is **images-only** (no `build:`, no bind mounts), so it
+drops straight into a Portainer stack. It pulls the prebuilt hub + UI images; the
+UI image itself reverse-proxies the hub paths (`nginx.conf`), so everything is on a
+**single port**: `/` → UI, `/mcp` · `/bridge` · `/health` → hub.
 
 ```bash
-export CC_HITL_TOKEN=$(openssl rand -hex 24)
-docker compose -f docker-compose.full.yml up -d --build
+# Portainer: paste docker-compose.full.yml into a stack, add CC_HITL_TOKEN as a
+# stack environment variable, deploy. Or locally:
+CC_HITL_TOKEN=$(openssl rand -hex 24) docker compose -f docker-compose.full.yml up -d
 ```
 
 Open http://localhost:22360 and paste `CC_HITL_TOKEN` — host/port default to this
 origin, so the dashboard connects with **no other config**. Agents connect at
-`http://localhost:22360/mcp`. Serving this over https makes the bridge same-origin
-`wss`, so there's no mixed-content problem. See the compose header for security notes.
+`http://localhost:22360/mcp`. Over https the bridge is same-origin `wss` (no
+mixed-content problem).
+
+> Both images must be **public** on GHCR (or add registry credentials in Portainer)
+> for the pull to succeed.
 
 It's a static SPA, so it can equally be dropped on any static host (Netlify,
 GitHub Pages, an S3 bucket, …).

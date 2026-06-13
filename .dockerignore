@@ -6,6 +6,5 @@ dist
 Dockerfile
 .dockerignore
 docker-compose*.yml
-proxy.conf
 README.md
 *.tsbuildinfo
