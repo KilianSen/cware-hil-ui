@@ -1,0 +1,18 @@
+services:
+  ui:
+    build: .
+    image: cware-hil-ui
+    # Prefer the prebuilt image instead of building locally? Comment out `build`
+    # above and uncomment:
+    # image: ghcr.io/kiliansen/cware-hil-ui:latest
+    ports:
+      # host:container — the SPA is served by nginx on :80 inside the container.
+      - "8080:80"
+    restart: unless-stopped
+
+# The UI is a static bundle; it has no hub config baked in. Open it
+# (http://localhost:8080) and enter the hub host / port / token in the top bar —
+# they're stored in your browser. Run the hub itself from cware-hil-mcp.
+#
+# Serving the UI over https? The hub must then be reachable over wss (TLS), or the
+# browser blocks the bridge WebSocket as mixed content.

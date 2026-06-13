@@ -27,17 +27,17 @@ npm run preview      # serve the built bundle
 
 ## Docker
 
-The image serves the static bundle with nginx:
+The image serves the static bundle with nginx. Easiest is compose:
 
 ```bash
-docker build -t cware-hil-ui .
-docker run -d -p 8080:80 cware-hil-ui
-# open http://localhost:8080 and point it at your hub
+docker compose up -d --build      # builds and serves on http://localhost:8080
 ```
 
-Or pull the CI-built image:
+Then open http://localhost:8080 and enter your hub's host / port / token in the top
+bar. Or run it by hand / pull the CI-built image:
 
 ```bash
+docker build -t cware-hil-ui . && docker run -d -p 8080:80 cware-hil-ui
 docker pull ghcr.io/kiliansen/cware-hil-ui:latest
 ```
 
