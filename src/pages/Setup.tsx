@@ -1,6 +1,7 @@
 import { useConnection } from "../hooks/useConnection";
 import { Tabs } from "../components/Tabs";
 import { CodeBlock } from "../components/CodeBlock";
+import { ConnectionSettings } from "../components/ConnectionSettings";
 
 export function Setup() {
   const { config } = useConnection();
@@ -30,6 +31,15 @@ export function Setup() {
 
   return (
     <div className="space-y-8">
+      <section>
+        <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">Hub connection</h2>
+        <p className="mb-3 text-sm text-zinc-400">
+          Where this dashboard reaches the hub. In a bundled deployment the host and token are
+          filled in for you — leave them as-is. Point at a different hub by editing the fields below.
+        </p>
+        <ConnectionSettings />
+      </section>
+
       <section>
         <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">Connect an agent</h2>
         <p className="mb-3 text-sm text-zinc-400">

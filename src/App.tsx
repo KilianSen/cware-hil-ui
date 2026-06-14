@@ -4,7 +4,7 @@ import { ConnectionProvider } from "./hooks/useConnection";
 import { SettingsProvider } from "./hooks/useSettings";
 import { HubProvider } from "./hooks/useHub";
 import { useHashRoute } from "./hooks/useHashRoute";
-import { ConnectionBar } from "./components/ConnectionBar";
+import { ConnectionStatus } from "./components/ConnectionStatus";
 import { Toasts } from "./components/Toasts";
 import { Dashboard } from "./pages/Dashboard";
 import { History } from "./pages/History";
@@ -34,29 +34,28 @@ function Shell() {
   return (
     <div className="min-h-full font-sans text-zinc-100">
       <div className="mx-auto max-w-4xl px-4 py-8">
-        <header className="mb-5">
-          <div className="flex items-baseline justify-between">
+        <header className="mb-6">
+          <div className="flex items-center justify-between gap-3">
             <h1 className="flex items-center gap-2 text-xl font-semibold">
               <Bot className="h-5 w-5 self-center text-violet-400" />
               Human-in-the-loop hub
             </h1>
-            <nav className="flex gap-1 text-sm">
-              <NavLink href="#/" active={!onSetup && !onHistory}>
-                Dashboard
-              </NavLink>
-              <NavLink href="#/history" active={onHistory}>
-                History
-              </NavLink>
-              <NavLink href="#/setup" active={onSetup}>
-                Setup
-              </NavLink>
-            </nav>
+            <div className="flex items-center gap-2">
+              <ConnectionStatus href="#/setup" />
+              <nav className="flex gap-1 text-sm">
+                <NavLink href="#/" active={!onSetup && !onHistory}>
+                  Dashboard
+                </NavLink>
+                <NavLink href="#/history" active={onHistory}>
+                  History
+                </NavLink>
+                <NavLink href="#/setup" active={onSetup}>
+                  Setup
+                </NavLink>
+              </nav>
+            </div>
           </div>
         </header>
-
-        <div className="mb-6">
-          <ConnectionBar />
-        </div>
 
         <AnimatePresence mode="wait">
           <motion.div

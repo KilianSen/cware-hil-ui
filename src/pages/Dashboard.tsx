@@ -97,9 +97,15 @@ export function Dashboard() {
         )}
 
         {!enabled ? (
-          <Empty Icon={KeyRound}>Set a token above to connect to a hub.</Empty>
+          <Empty Icon={KeyRound}>
+            No hub token set.{" "}
+            <a href="#/setup" className="text-violet-400 hover:underline">Open Setup</a> to connect.
+          </Empty>
         ) : !connected ? (
-          <Empty Icon={PlugZap}>Not connected to the hub.</Empty>
+          <Empty Icon={PlugZap}>
+            Not connected to the hub.{" "}
+            <a href="#/setup" className="text-violet-400 hover:underline">Check Setup</a>.
+          </Empty>
         ) : questions.length === 0 ? (
           <Empty Icon={Inbox}>Nothing waiting on you.</Empty>
         ) : visible.length === 0 ? (

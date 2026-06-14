@@ -1,20 +1,19 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Loader2, Wifi, WifiOff } from "lucide-react";
 import { useConnection } from "../hooks/useConnection";
-import { useHub } from "../hooks/useHub";
 import { useSettings } from "../hooks/useSettings";
+import { ConnectionStatus } from "./ConnectionStatus";
 import { notificationPermission, requestNotificationPermission } from "../lib/alerts";
 import { cn } from "../lib/cn";
 
 /**
- * Editable hub connection (host / port / token) plus a live status pill. The
- * draft is local until "Connect" commits it, so we don't reconnect on every
- * keystroke of the token.
+ * Editable hub connection (host / port / token) plus alert preferences. Lives on
+ * the Setup page — the control pages only show the compact {@link ConnectionStatus}
+ * pill. The draft is local until "Connect" commits it, so we don't reconnect on
+ * every keystroke of the token.
  */
-export function ConnectionBar() {
+export function ConnectionSettings() {
   const { config, setConfig } = useConnection();
-  const { connected, enabled } = useHub();
 
   const [host, setHost] = useState(config.host);
   const [port, setPort] = useState(String(config.port));
@@ -30,17 +29,6 @@ export function ConnectionBar() {
   const dirty = host !== config.host || port !== String(config.port) || token !== config.token;
 
   const apply = () => setConfig({ host: host.trim(), port: Number(port) || 22360, token: token.trim() });
-
-  const state: "off" | "connecting" | "connected" = !enabled
-    ? "off"
-    : connected
-      ? "connected"
-      : "connecting";
-  const status = {
-    off: { dot: "bg-zinc-500", text: "no token", Icon: WifiOff, tone: "text-zinc-400" },
-    connecting: { dot: "bg-amber-500", text: "connecting…", Icon: Loader2, tone: "text-amber-300" },
-    connected: { dot: "bg-emerald-500", text: "connected", Icon: Wifi, tone: "text-emerald-300" },
-  }[state];
 
   return (
     <div className="space-y-3">
@@ -76,19 +64,8 @@ export function ConnectionBar() {
         >
           {dirty ? "Connect" : "Connected"}
         </motion.button>
-        <div className={cn("flex items-center gap-2 pb-1.5 text-[13px]", status.tone)}>
-          <span className="relative flex h-2.5 w-2.5">
-            {state === "connecting" && (
-              <motion.span
-                className={cn("absolute inline-flex h-full w-full rounded-full", status.dot)}
-                animate={{ scale: [1, 2], opacity: [0.6, 0] }}
-                transition={{ duration: 1.2, repeat: Infinity, ease: "easeOut" }}
-              />
-            )}
-            <span className={cn("relative inline-flex h-2.5 w-2.5 rounded-full", status.dot)} />
-          </span>
-          <status.Icon className={cn("h-3.5 w-3.5", state === "connecting" && "animate-spin")} />
-          {status.text}
+        <div className="pb-1.5">
+          <ConnectionStatus />
         </div>
       </div>
       <AlertSettings />
