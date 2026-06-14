@@ -9,6 +9,7 @@ import { Toasts } from "./components/Toasts";
 import { Dashboard } from "./pages/Dashboard";
 import { History } from "./pages/History";
 import { Setup } from "./pages/Setup";
+import { VersionFooter } from "./components/VersionFooter";
 import { cn } from "./lib/cn";
 
 export function App() {
@@ -68,6 +69,8 @@ function Shell() {
             {onSetup ? <Setup /> : onHistory ? <History /> : <Dashboard />}
           </motion.div>
         </AnimatePresence>
+
+        <VersionFooter />
       </div>
     </div>
   );

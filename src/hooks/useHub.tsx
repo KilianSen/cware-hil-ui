@@ -24,6 +24,10 @@ export interface HubState {
   notifications: Notification[];
   /** Persistent notification history (seeded from the snapshot). */
   notificationHistory: Notification[];
+  /** Running hub version (null until connected / if the hub is older). */
+  serverVersion: string | null;
+  /** Bridge protocol version the hub speaks (null until connected). */
+  serverProtocolVersion: number | null;
   submitAnswer: (answer: Answer) => void;
   cancelQuestion: (questionId: string) => void;
   dismissNotification: (id: string) => void;
@@ -100,6 +104,8 @@ function useHubClient(config: HubConnectionConfig): HubState {
     agents,
     notifications,
     notificationHistory,
+    serverVersion: connected ? client.serverVersion : null,
+    serverProtocolVersion: connected ? client.serverProtocolVersion : null,
     submitAnswer: (a) => client.submitAnswer(a),
     cancelQuestion: (id) => client.cancelQuestion(id),
     dismissNotification: (id) => setNotifications((prev) => prev.filter((n) => n.id !== id)),

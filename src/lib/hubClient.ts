@@ -39,6 +39,10 @@ export class HubClient {
   readonly notifications: Notification[] = [];
   /** Reverse-channel messages the human has sent agents (most recent last). */
   readonly agentMessages: AgentMessage[] = [];
+  /** Running hub version, from the snapshot (undefined until connected / if old hub). */
+  serverVersion: string | null = null;
+  /** Bridge protocol version the hub speaks, from the snapshot. */
+  serverProtocolVersion: number | null = null;
   connected = false;
 
   /** UI hooks — set by the consumer. */
@@ -180,6 +184,8 @@ export class HubClient {
       case "snapshot":
         this.questions.clear();
         this.agents.clear();
+        this.serverVersion = msg.serverVersion ?? null;
+        this.serverProtocolVersion = msg.protocolVersion;
         for (const q of msg.questions) this.questions.set(q.id, q);
         for (const a of msg.agents) this.agents.set(a.agentId, a);
         // Reconcile notification history: seed from the snapshot, de-duped by id.

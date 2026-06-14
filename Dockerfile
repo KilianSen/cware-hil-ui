@@ -13,6 +13,10 @@ RUN git config --global url."https://github.com/".insteadOf "ssh://git@github.co
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Released version, set by CI from the image tag; Vite bakes it into the bundle
+# (import.meta.env.VITE_APP_VERSION). Defaults to "dev" for plain `docker build`.
+ARG APP_VERSION=dev
+ENV VITE_APP_VERSION=$APP_VERSION
 RUN npm run build
 
 # ---- runner: serve the static bundle with nginx ----
