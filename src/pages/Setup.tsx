@@ -10,8 +10,13 @@ export function Setup() {
 
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
   const httpScheme = window.location.protocol === "https:" ? "https" : "http";
-  const mcpUrl = `${httpScheme}://${host}:${port}/mcp`;
-  const bridgeUrl = `${wsScheme}://${host}:${port}/bridge`;
+  // Same-origin deployment (the hub is reached through this UI's reverse proxy):
+  // reuse the page's authority so default ports like 443/80 are omitted — a
+  // TLS-fronted single-port deploy then advertises the working URL instead of a
+  // bogus `:22360`. A different host (e.g. a hub on 127.0.0.1) keeps host:port.
+  const authority = host === window.location.hostname ? window.location.host : `${host}:${port}`;
+  const mcpUrl = `${httpScheme}://${authority}/mcp`;
+  const bridgeUrl = `${wsScheme}://${authority}/bridge`;
 
   const claudeCmd =
     `claude mcp add --transport http --scope project hitl ${mcpUrl} \\\n` +
