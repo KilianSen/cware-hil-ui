@@ -1,10 +1,9 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Command, Monitor, Moon, Sun } from "lucide-react";
-import NumberFlow from "@number-flow/react";
 import { ConnectionProvider } from "./hooks/useConnection";
 import { SettingsProvider, useSettings } from "./hooks/useSettings";
-import { HubProvider, useHub } from "./hooks/useHub";
+import { HubProvider } from "./hooks/useHub";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { ConnectionStatus } from "./components/ConnectionStatus";
 import { CommandPalette, openCommandPalette } from "./components/CommandPalette";
@@ -16,7 +15,8 @@ import { History } from "./pages/History";
 import { Setup } from "./pages/Setup";
 import { VersionFooter } from "./components/VersionFooter";
 import { applyTheme } from "./lib/theme";
-import { cn } from "./lib/cn";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export function App() {
   return (
@@ -60,7 +60,7 @@ function Shell() {
   const active = onSetup ? "setup" : onHistory ? "history" : "dashboard";
 
   return (
-    <div className="min-h-full font-sans text-ink">
+    <div className="min-h-full">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:py-8">
         <Header active={active} />
         <OfflineBanner />
@@ -84,65 +84,31 @@ function Shell() {
 }
 
 function Header({ active }: { active: string }) {
-  const { questions, agents, enabled, connected } = useHub();
-
   return (
-    <header className="mb-6">
-      <div className="hud-corners rounded-xl border border-edge bg-panel/70 backdrop-blur">
-        {/* Brand + global controls */}
-        <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4">
-          <a href="#/" className="flex items-center gap-2.5 rounded-md">
-            <BrandMark className="h-6 w-6 shrink-0 text-accent" />
-            <span className="flex items-baseline gap-1.5 leading-none">
-              <span className="text-[15px] font-semibold tracking-tight text-ink">cware</span>
-              <span className="font-mono text-[13px] text-ink-faint">/hitl</span>
-            </span>
-          </a>
+    <header className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-3 border-b pb-4">
+      <a href="#/" className="flex items-center gap-2 rounded-md">
+        <BrandMark className="text-foreground size-5 shrink-0" />
+        <span className="flex items-baseline gap-1 leading-none">
+          <span className="font-semibold tracking-tight">cware</span>
+          <span className="text-muted-foreground text-sm">/hitl</span>
+        </span>
+      </a>
 
-          <div className="flex items-center gap-1.5">
-            <ConnectionStatus href="#/setup" />
-            <ThemeButton />
-            <button
-              type="button"
-              onClick={openCommandPalette}
-              aria-label="Open command palette"
-              className="hidden items-center gap-1.5 rounded-md border border-edge bg-well px-2 py-1.5 text-[12px] text-ink-dim transition-colors hover:border-edge-strong hover:text-ink sm:inline-flex"
-            >
-              <Command className="h-3.5 w-3.5" />
-              <kbd className="border-0 bg-transparent p-0 text-ink-faint">K</kbd>
-            </button>
-            <button
-              type="button"
-              onClick={openCommandPalette}
-              aria-label="Open command palette"
-              className="inline-flex items-center rounded-md border border-edge bg-well p-2 text-ink-dim transition-colors hover:text-ink sm:hidden"
-            >
-              <Command className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+      <Nav active={active} />
 
-        {/* Status strip + nav */}
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-edge px-3 py-2 sm:px-4">
-          <div className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-wider text-ink-faint">
-            <span className="inline-flex items-center gap-1.5">
-              queue
-              <span className="tabular-nums text-ink-dim">
-                <NumberFlow value={enabled && connected ? questions.length : 0} />
-              </span>
-              waiting
-            </span>
-            <span className="text-edge-strong">·</span>
-            <span className="inline-flex items-center gap-1.5">
-              agents
-              <span className="tabular-nums text-ink-dim">
-                <NumberFlow value={enabled && connected ? agents.length : 0} />
-              </span>
-              active
-            </span>
-          </div>
-          <Nav active={active} />
-        </div>
+      <div className="ml-auto flex items-center gap-1">
+        <ConnectionStatus href="#/setup" />
+        <ThemeButton />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={openCommandPalette}
+          aria-label="Open command palette"
+          className="text-muted-foreground"
+        >
+          <Command className="size-4" />
+        </Button>
       </div>
     </header>
   );
@@ -150,7 +116,7 @@ function Header({ active }: { active: string }) {
 
 function Nav({ active }: { active: string }) {
   return (
-    <nav className="flex gap-0.5 rounded-lg border border-edge bg-well p-0.5 text-[13px]">
+    <nav className="flex items-center gap-1 text-sm">
       {NAV.map((n) => {
         const isActive = n.key === active;
         return (
@@ -159,14 +125,16 @@ function Nav({ active }: { active: string }) {
             href={n.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "relative rounded-md px-3 py-1 transition-colors",
-              isActive ? "text-ink" : "text-ink-dim hover:text-ink",
+              "relative rounded-md px-3 py-1.5 transition-colors",
+              isActive
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent",
             )}
           >
             {isActive && (
               <motion.span
                 layoutId="nav-active"
-                className="absolute inset-0 -z-0 rounded-md bg-accent/15 ring-1 ring-accent/40"
+                className="bg-muted absolute inset-0 -z-0 rounded-md"
                 transition={{ type: "spring", stiffness: 500, damping: 40 }}
               />
             )}
@@ -183,14 +151,16 @@ function ThemeButton() {
   const Icon = settings.theme === "dark" ? Moon : settings.theme === "light" ? Sun : Monitor;
   const next = settings.theme === "system" ? "dark" : settings.theme === "dark" ? "light" : "system";
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="icon"
       onClick={() => update({ theme: next })}
       aria-label={`Theme: ${settings.theme}. Switch to ${next}.`}
       title={`Theme: ${settings.theme}`}
-      className="inline-flex items-center rounded-md border border-edge bg-well p-2 text-ink-dim transition-colors hover:text-ink"
+      className="text-muted-foreground"
     >
-      <Icon className="h-4 w-4" />
-    </button>
+      <Icon className="size-4" />
+    </Button>
   );
 }

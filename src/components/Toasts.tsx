@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import type { NotificationLevel } from "cware-hil-lib";
 import { useHub } from "../hooks/useHub";
 import { useSettings } from "../hooks/useSettings";

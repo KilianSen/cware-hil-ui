@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
 import { useConnection } from "../hooks/useConnection";
 import { useSettings } from "../hooks/useSettings";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { notificationPermission, requestNotificationPermission } from "../lib/alerts";
-import { cn } from "../lib/cn";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /**
  * Editable hub connection (host / port / token) plus alert preferences. Lives on
@@ -32,38 +35,40 @@ export function ConnectionSettings() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-edge bg-panel/80 p-3 backdrop-blur">
-        <Field label="Host" className="w-36">
-          <input value={host} onChange={(e) => setHost(e.target.value)} spellCheck={false} className={inputCls} />
+      <div className="bg-card flex flex-wrap items-end gap-3 rounded-xl border p-3">
+        <Field label="Host" htmlFor="conn-host" className="w-36">
+          <Input
+            id="conn-host"
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            spellCheck={false}
+            className="font-mono text-[13px]"
+          />
         </Field>
-        <Field label="Port" className="w-24">
-          <input
+        <Field label="Port" htmlFor="conn-port" className="w-24">
+          <Input
+            id="conn-port"
             value={port}
             onChange={(e) => setPort(e.target.value.replace(/[^0-9]/g, ""))}
             inputMode="numeric"
-            className={inputCls}
+            className="font-mono text-[13px]"
           />
         </Field>
-        <Field label="Token" className="min-w-[200px] flex-1">
-          <input
+        <Field label="Token" htmlFor="conn-token" className="min-w-[200px] flex-1">
+          <Input
+            id="conn-token"
             value={token}
             onChange={(e) => setToken(e.target.value)}
             type="password"
             placeholder="bearer token"
             autoComplete="off"
             spellCheck={false}
-            className={inputCls}
+            className="font-mono text-[13px]"
           />
         </Field>
-        <motion.button
-          type="button"
-          onClick={apply}
-          disabled={!dirty}
-          whileTap={dirty ? { scale: 0.96 } : undefined}
-          className="rounded-md border border-accent bg-accent/15 px-3 py-1.5 text-sm text-ink transition-colors hover:bg-accent/25 disabled:cursor-default disabled:opacity-40"
-        >
+        <Button type="button" onClick={apply} disabled={!dirty}>
           {dirty ? "Connect" : "Connected"}
-        </motion.button>
+        </Button>
         <div className="pb-1.5">
           <ConnectionStatus />
         </div>
@@ -77,57 +82,62 @@ function AlertSettings() {
   const { settings, update } = useSettings();
   const [perm, setPerm] = useState(notificationPermission());
 
-  const enableOs = async () => {
-    if (perm !== "granted") {
+  const enableOs = async (next: boolean) => {
+    if (next && perm !== "granted") {
       const p = await requestNotificationPermission();
       setPerm(p);
       update({ osNotifications: p === "granted" });
     } else {
-      update({ osNotifications: !settings.osNotifications });
+      update({ osNotifications: next });
     }
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-4 px-1 text-[13px] text-ink-dim">
-      <label className="flex cursor-pointer items-center gap-2">
-        <input
-          type="checkbox"
+    <div className="text-muted-foreground flex flex-wrap items-center gap-4 px-1 text-[13px]">
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="alert-sound"
           checked={settings.soundOnQuestion}
-          onChange={(e) => update({ soundOnQuestion: e.target.checked })}
-          className="accent-accent"
+          onCheckedChange={(c) => update({ soundOnQuestion: c === true })}
         />
-        Sound on new question
-      </label>
-      <label className="flex cursor-pointer items-center gap-2">
-        <input
-          type="checkbox"
+        <Label htmlFor="alert-sound" className="cursor-pointer font-normal">
+          Sound on new question
+        </Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="alert-os"
           checked={settings.osNotifications && perm === "granted"}
-          onChange={enableOs}
-          className="accent-accent"
+          onCheckedChange={(c) => void enableOs(c === true)}
         />
-        Desktop notifications
-      </label>
-      {perm === "denied" && <span className="text-xs text-ink-faint">(blocked by the browser)</span>}
+        <Label htmlFor="alert-os" className="cursor-pointer font-normal">
+          Desktop notifications
+        </Label>
+      </div>
+      {perm === "denied" && (
+        <span className="text-muted-foreground text-xs">(blocked by the browser)</span>
+      )}
     </div>
   );
 }
 
-const inputCls =
-  "w-full rounded-md border border-edge bg-well px-2.5 py-1.5 font-mono text-[13px] text-ink outline-none transition-colors focus:border-accent";
-
 function Field({
   label,
-  className = "",
+  htmlFor,
+  className,
   children,
 }: {
   label: string;
+  htmlFor: string;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className={cn("block", className)}>
-      <span className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-ink-faint">{label}</span>
+    <div className={cn("space-y-1", className)}>
+      <Label htmlFor={htmlFor} className="text-muted-foreground text-xs">
+        {label}
+      </Label>
       {children}
-    </label>
+    </div>
   );
 }

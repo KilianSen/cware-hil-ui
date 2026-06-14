@@ -1,9 +1,17 @@
 import { useState } from "react";
-import { motion } from "motion/react";
+import type { ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
-import { cn } from "../lib/cn";
+import { Button } from "@/components/ui/button";
 
-export function CopyButton({ text, className = "" }: { text: string; className?: string }) {
+export function CopyButton({
+  text,
+  className,
+  children = "Copy",
+}: {
+  text: string;
+  className?: string;
+  children?: ReactNode;
+}) {
   const [copied, setCopied] = useState(false);
 
   const onClick = async () => {
@@ -17,21 +25,16 @@ export function CopyButton({ text, className = "" }: { text: string; className?:
   };
 
   return (
-    <motion.button
+    <Button
       type="button"
+      variant="outline"
+      size="sm"
       onClick={onClick}
-      whileTap={{ scale: 0.94 }}
       aria-label={copied ? "Copied" : "Copy to clipboard"}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors",
-        copied
-          ? "border-ok text-ok"
-          : "border-edge text-ink-dim hover:border-accent",
-        className,
-      )}
+      className={className}
     >
-      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-      {copied ? "Copied" : "Copy"}
-    </motion.button>
+      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+      {copied ? "Copied" : children}
+    </Button>
   );
 }

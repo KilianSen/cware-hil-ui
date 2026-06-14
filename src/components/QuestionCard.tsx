@@ -6,12 +6,19 @@ import { ListChecks, MessageSquare, ShieldCheck, X } from "lucide-react";
 import { useHub } from "../hooks/useHub";
 import { useNow } from "../hooks/useNow";
 import { relativeTime } from "../lib/format";
-import { cn } from "../lib/cn";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const KIND: Record<Question["kind"], { label: string; Icon: typeof MessageSquare }> = {
-  ask_user: { label: "ask_user", Icon: MessageSquare },
-  ask_choice: { label: "ask_choice", Icon: ListChecks },
-  request_approval: { label: "request_approval", Icon: ShieldCheck },
+  ask_user: { label: "Question", Icon: MessageSquare },
+  ask_choice: { label: "Choice", Icon: ListChecks },
+  request_approval: { label: "Approval", Icon: ShieldCheck },
 };
 
 export function QuestionCard({
@@ -40,38 +47,41 @@ export function QuestionCard({
       exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.15 } }}
       transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
       className={cn(
-        "rounded-xl border bg-panel p-4 transition-shadow",
-        high ? "border-l-2 border-l-prio-high border-edge" : "border-edge",
-        selected && "ring-2 ring-accent ring-offset-2 ring-offset-canvas",
+        "bg-card text-card-foreground rounded-xl border p-4 shadow-sm transition-shadow",
+        high && "border-l-2 border-l-destructive",
+        selected && "ring-ring ring-2 ring-offset-2 ring-offset-background",
       )}
     >
-      <div className="mb-2 flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded border border-edge bg-well px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-ink-dim">
-          <kind.Icon className="h-3 w-3" />
-          {kind.label}
-        </span>
-        {question.priority && question.priority !== "normal" && (
-          <span
-            className={cn(
-              "rounded px-1.5 py-0.5 font-mono text-[11px] font-medium uppercase tracking-wide",
-              question.priority === "high" ? "bg-danger/20 text-danger" : "bg-well text-ink-faint",
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-medium leading-snug">{question.title}</div>
+          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+            <kind.Icon className="size-3.5" />
+            <span>{kind.label}</span>
+            {agentLabel && (
+              <>
+                <span className="text-border">·</span>
+                <span className="truncate">{agentLabel}</span>
+              </>
             )}
-          >
-            {question.priority}
-          </span>
+            <span className="text-border">·</span>
+            <span>{relativeTime(question.createdAt)}</span>
+          </div>
+        </div>
+        {high && (
+          <Badge variant="destructive" className="shrink-0">
+            High
+          </Badge>
         )}
-        {agentLabel && <span className="truncate text-xs text-ink-faint">{agentLabel}</span>}
-        <span className="ml-auto shrink-0 font-mono text-[11px] text-ink-faint">
-          {relativeTime(question.createdAt)}
-        </span>
       </div>
-      <div className="mb-2 font-medium text-ink">{question.title}</div>
 
       {question.kind === "ask_user" && (
         <AskUser
           prompt={question.prompt}
           disabled={!connected}
-          onSubmit={(text) => send({ questionId: question.id, kind: "ask_user", text, answeredAt: now() })}
+          onSubmit={(text) =>
+            send({ questionId: question.id, kind: "ask_user", text, answeredAt: now() })
+          }
         />
       )}
       {question.kind === "ask_choice" && (
@@ -88,35 +98,36 @@ export function QuestionCard({
           question={question}
           disabled={!connected}
           onDecide={(decision, comment) =>
-            send({ questionId: question.id, kind: "request_approval", decision, comment, answeredAt: now() })
+            send({
+              questionId: question.id,
+              kind: "request_approval",
+              decision,
+              comment,
+              answeredAt: now(),
+            })
           }
         />
       )}
 
       <div className="mt-3 flex items-center justify-between">
         {!connected ? (
-          <span className="font-mono text-[11px] uppercase tracking-wider text-warn">paused · reconnecting</span>
+          <span className="text-xs text-amber-600 dark:text-amber-500">paused · reconnecting</span>
         ) : (
           <span />
         )}
-        <motion.button
+        <Button
           type="button"
-          whileTap={{ scale: 0.96 }}
+          variant="outline"
+          size="sm"
           onClick={() => cancelQuestion(question.id)}
           aria-label="Dismiss question"
-          className="inline-flex items-center gap-1 rounded-md border border-edge px-3 py-1.5 text-sm text-ink-dim transition-colors hover:border-edge-strong hover:text-ink"
         >
-          <X className="h-3.5 w-3.5" /> Dismiss
-        </motion.button>
+          <X className="size-3.5" /> Dismiss
+        </Button>
       </div>
     </motion.div>
   );
 }
-
-const textareaCls =
-  "w-full rounded-lg border border-edge bg-well px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-accent disabled:cursor-not-allowed disabled:opacity-50";
-const primaryCls =
-  "inline-flex items-center gap-1.5 rounded-md border border-accent bg-accent/15 px-3 py-1.5 text-sm text-ink transition-colors hover:bg-accent/25 disabled:cursor-not-allowed disabled:opacity-40";
 
 /** ⌘/Ctrl+Enter to submit from a textarea. */
 function submitChord(e: React.KeyboardEvent, run: () => void) {
@@ -127,7 +138,11 @@ function submitChord(e: React.KeyboardEvent, run: () => void) {
 }
 
 function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="ml-1">{children}</kbd>;
+  return (
+    <kbd className="bg-muted text-muted-foreground ml-1 rounded border px-1 py-0.5 font-mono text-[10px] leading-none">
+      {children}
+    </kbd>
+  );
 }
 
 function AskUser({
@@ -142,26 +157,20 @@ function AskUser({
   const [text, setText] = useState("");
   return (
     <div className="space-y-2">
-      {prompt && <p className="whitespace-pre-wrap text-sm text-ink-dim">{prompt}</p>}
-      <textarea
+      {prompt && <p className="text-muted-foreground whitespace-pre-wrap text-sm">{prompt}</p>}
+      <Textarea
         rows={3}
         value={text}
         disabled={disabled}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => submitChord(e, () => onSubmit(text))}
         placeholder="Type your answer…"
-        className={textareaCls}
       />
       <div className="flex justify-end">
-        <motion.button
-          type="button"
-          disabled={disabled}
-          whileTap={disabled ? undefined : { scale: 0.96 }}
-          className={primaryCls}
-          onClick={() => onSubmit(text)}
-        >
-          Submit<Kbd>⌘↵</Kbd>
-        </motion.button>
+        <Button type="button" size="sm" disabled={disabled} onClick={() => onSubmit(text)}>
+          Submit
+          <Kbd>⌘↵</Kbd>
+        </Button>
       </div>
     </div>
   );
@@ -180,57 +189,78 @@ function AskChoice({
   const [selected, setSelected] = useState<string[]>([]);
   const [note, setNote] = useState("");
 
-  const toggle = (id: string) => {
-    if (multi) setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-    else setSelected([id]);
-  };
+  const toggle = (id: string) =>
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   const submit = () => onSubmit(selected, note.trim() || undefined);
+  const choices = question.choices ?? [];
 
   return (
     <div className="space-y-2">
-      {question.prompt && <p className="whitespace-pre-wrap text-sm text-ink-dim">{question.prompt}</p>}
-      <div
-        role={multi ? "group" : "radiogroup"}
-        aria-label="Choices"
-        className="space-y-1"
-      >
-        {(question.choices ?? []).map((c) => (
-          <label
-            key={c.id}
-            className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm text-ink transition-colors hover:bg-well"
-          >
-            <input
-              type={multi ? "checkbox" : "radio"}
-              name={`q-${question.id}`}
-              checked={selected.includes(c.id)}
-              disabled={disabled}
-              onChange={() => toggle(c.id)}
-              className="accent-accent"
-            />
-            {c.label}
-          </label>
-        ))}
-      </div>
-      <textarea
+      {question.prompt && (
+        <p className="text-muted-foreground whitespace-pre-wrap text-sm">{question.prompt}</p>
+      )}
+
+      {multi ? (
+        <div role="group" aria-label="Choices" className="space-y-1">
+          {choices.map((c) => {
+            const id = `q-${question.id}-${c.id}`;
+            return (
+              <div
+                key={c.id}
+                className="hover:bg-accent flex items-center gap-2 rounded-md px-1.5 py-1 text-sm"
+              >
+                <Checkbox
+                  id={id}
+                  checked={selected.includes(c.id)}
+                  disabled={disabled}
+                  onCheckedChange={() => toggle(c.id)}
+                />
+                <Label htmlFor={id} className="flex-1 cursor-pointer font-normal">
+                  {c.label}
+                </Label>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <RadioGroup
+          aria-label="Choices"
+          value={selected[0] ?? ""}
+          onValueChange={(v) => setSelected([v])}
+          disabled={disabled}
+          className="gap-1"
+        >
+          {choices.map((c) => {
+            const id = `q-${question.id}-${c.id}`;
+            return (
+              <div
+                key={c.id}
+                className="hover:bg-accent flex items-center gap-2 rounded-md px-1.5 py-1 text-sm"
+              >
+                <RadioGroupItem id={id} value={c.id} />
+                <Label htmlFor={id} className="flex-1 cursor-pointer font-normal">
+                  {c.label}
+                </Label>
+              </div>
+            );
+          })}
+        </RadioGroup>
+      )}
+
+      <Textarea
         rows={2}
         value={note}
         disabled={disabled}
         onChange={(e) => setNote(e.target.value)}
         onKeyDown={(e) => submitChord(e, submit)}
         placeholder="Add a note (optional)…"
-        className={textareaCls}
       />
       <div className="flex justify-end">
-        <motion.button
-          type="button"
-          disabled={disabled}
-          whileTap={disabled ? undefined : { scale: 0.96 }}
-          className={primaryCls}
-          onClick={submit}
-        >
-          Submit<Kbd>⌘↵</Kbd>
-        </motion.button>
+        <Button type="button" size="sm" disabled={disabled} onClick={submit}>
+          Submit
+          <Kbd>⌘↵</Kbd>
+        </Button>
       </div>
     </div>
   );
@@ -261,40 +291,45 @@ function Approval({
   );
 
   return (
-    <div ref={hotRef} tabIndex={-1} className="space-y-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
-      {a?.body && <p className="whitespace-pre-wrap text-sm text-ink-dim">{a.body}</p>}
+    <div
+      ref={hotRef}
+      tabIndex={-1}
+      className="focus-visible:ring-ring space-y-2 rounded-lg outline-none focus-visible:ring-2"
+    >
+      {a?.body && <p className="text-muted-foreground whitespace-pre-wrap text-sm">{a.body}</p>}
       {a?.diff && (
-        <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-edge bg-well p-3 font-mono text-[12px] text-ink-dim">
+        <pre className="bg-muted text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all rounded-lg border p-3 font-mono text-[12px]">
           {a.diff}
         </pre>
       )}
-      <input
+      <Input
         type="text"
         value={comment}
         disabled={disabled}
         onChange={(e) => setComment(e.target.value)}
         placeholder="Comment (optional)…"
-        className={textareaCls}
       />
       <div className="flex justify-end gap-2">
-        <motion.button
+        <Button
           type="button"
+          variant="destructive"
+          size="sm"
           disabled={disabled}
-          whileTap={disabled ? undefined : { scale: 0.96 }}
           onClick={() => onDecide("reject", commentOpt())}
-          className="inline-flex items-center gap-1 rounded-md border border-danger/60 px-3 py-1.5 text-sm text-danger transition-colors hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Reject<Kbd>R</Kbd>
-        </motion.button>
-        <motion.button
+          Reject
+          <Kbd>R</Kbd>
+        </Button>
+        <Button
           type="button"
+          size="sm"
           disabled={disabled}
-          whileTap={disabled ? undefined : { scale: 0.96 }}
           onClick={() => onDecide("approve", commentOpt())}
-          className="inline-flex items-center gap-1 rounded-md border border-ok bg-ok/15 px-3 py-1.5 text-sm text-ok transition-colors hover:bg-ok/25 disabled:cursor-not-allowed disabled:opacity-40"
+          className="bg-emerald-600 text-white hover:bg-emerald-600/90"
         >
-          Approve<Kbd>A</Kbd>
-        </motion.button>
+          Approve
+          <Kbd>A</Kbd>
+        </Button>
       </div>
     </div>
   );

@@ -1,116 +1,102 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /*
- * Mission Control design tokens.
+ * shadcn/ui (new-york, neutral base) design tokens for Tailwind v4.
  *
- * Components style themselves with *semantic* utilities (bg-canvas, bg-panel,
- * text-ink-dim, border-edge, text-accent, …) rather than raw zinc/violet. The
- * tokens below are the dark ("control room") defaults; the [data-theme="light"]
- * block at the bottom re-points the same CSS variables, so a theme swap is a
- * variable override — no component changes. Tailwind v4 compiles e.g. `bg-panel`
- * to `background: var(--color-panel)`, so the cascade does the rest.
+ * The theme is toggled via the `data-theme` attribute on <html> (set pre-paint in
+ * index.html and kept in sync by lib/theme.ts), so the dark variant targets that
+ * attribute instead of shadcn's default `.dark` class — everything else is stock.
  */
-@theme {
-  /* Inter for prose/UI (loaded in main.tsx); JetBrains Mono for HUD labels,
-     tags, timestamps, ids, kbd. */
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+}
+
+[data-theme="dark"] {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.371 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}
+
+@theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Surfaces (back → front): page, cards/panels, inset wells (inputs, code). */
-  --color-canvas: #07070a;
-  --color-panel: #0e1014;
-  --color-well: #08090c;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
-  /* Hairlines. */
-  --color-edge: #1b1e25;
-  --color-edge-strong: #2b2f38;
-
-  /* Text ramp. */
-  --color-ink: #e8eaed;
-  --color-ink-dim: #9298a3;
-  --color-ink-faint: #5c626c;
-
-  /* Signature accent — electric teal. Opacity modifiers (accent/15, accent/40)
-     cover soft fills and rings. */
-  --color-accent: oklch(0.82 0.125 192);
-
-  /* Status hues — used by LEDs and badges (kept theme-aware via these vars). */
-  --color-live: oklch(0.82 0.125 192);
-  --color-ok: oklch(0.72 0.15 158);
-  --color-warn: oklch(0.79 0.15 75);
-  --color-info: oklch(0.72 0.13 235);
-  --color-danger: oklch(0.66 0.2 22);
-
-  /* Priority accents — generate text-prio / bg-prio / border-prio utilities. */
-  --color-prio-high: oklch(0.65 0.21 16); /* rose */
-  --color-prio-normal: oklch(0.71 0.01 286);
-  --color-prio-low: oklch(0.55 0.01 286);
-
-  /* Easing token for motion-driven UI (mirrors framer's gentle ease). */
-  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 }
 
-:root {
-  color-scheme: dark;
-}
-
-[data-theme="light"] {
-  color-scheme: light;
-
-  /* "Daylight console" — a tinted, low-contrast light variant that keeps the
-     Mission Control character rather than going stark white. */
-  --color-canvas: #e6e8ee;
-  --color-panel: #f4f5f8;
-  --color-well: #dde0e7;
-  --color-edge: #ccd0da;
-  --color-edge-strong: #b1b7c4;
-  --color-ink: #161922;
-  --color-ink-dim: #4d5562;
-  --color-ink-faint: #828a98;
-  --color-accent: oklch(0.58 0.12 196);
-  --color-live: oklch(0.58 0.12 196);
-  --color-ok: oklch(0.55 0.15 158);
-  --color-warn: oklch(0.62 0.16 70);
-  --color-info: oklch(0.55 0.16 240);
-  --color-danger: oklch(0.55 0.22 25);
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
 }
 
 html,
 body,
 #root {
   height: 100%;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  color: var(--color-ink);
-  background-color: var(--color-canvas);
-  /* A faint teal glow up top + a low-alpha grid give the "console" depth. */
-  background-image:
-    radial-gradient(
-      55rem 32rem at 50% -8%,
-      color-mix(in oklch, var(--color-accent) 10%, transparent),
-      transparent 70%
-    ),
-    linear-gradient(to right, color-mix(in oklch, var(--color-edge) 55%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklch, var(--color-edge) 55%, transparent) 1px, transparent 1px);
-  background-size:
-    100% 100%,
-    44px 44px,
-    44px 44px;
-  background-position:
-    center top,
-    center top,
-    center top;
-  background-attachment: fixed;
-}
-
-/* Visible keyboard focus everywhere (components may add their own ring too). */
-:focus-visible {
-  outline: 2px solid color-mix(in oklch, var(--color-accent) 75%, transparent);
-  outline-offset: 2px;
 }
 
 /* Respect users who prefer reduced motion: neutralize transitions/animations. */
@@ -121,55 +107,5 @@ body {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
-  }
-}
-
-/* Small keyboard-hint chips used on action buttons. */
-kbd {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  line-height: 1;
-  padding: 0.125rem 0.3rem;
-  border-radius: 0.25rem;
-  border: 1px solid var(--color-edge-strong);
-  background: var(--color-well);
-  color: var(--color-ink-dim);
-}
-
-@layer components {
-  /* A glowing status LED. Color is set by the consumer via `color:` (the dot and
-     its halo both read currentColor). */
-  .led {
-    position: relative;
-    display: inline-block;
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 9999px;
-    background: currentColor;
-    box-shadow: 0 0 0.5rem color-mix(in oklch, currentColor 70%, transparent);
-  }
-  /* Decorative HUD corner ticks for framed panels. */
-  .hud-corners {
-    position: relative;
-  }
-  .hud-corners::before,
-  .hud-corners::after {
-    content: "";
-    position: absolute;
-    width: 0.5rem;
-    height: 0.5rem;
-    border-color: var(--color-edge-strong);
-    border-style: solid;
-    pointer-events: none;
-  }
-  .hud-corners::before {
-    top: -1px;
-    left: -1px;
-    border-width: 1px 0 0 1px;
-  }
-  .hud-corners::after {
-    bottom: -1px;
-    right: -1px;
-    border-width: 0 1px 1px 0;
   }
 }

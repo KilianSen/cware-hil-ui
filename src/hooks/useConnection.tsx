@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { HubConnectionConfig } from "../lib/hubClient";
+import { readPairingFromUrl, stripPairingFromUrl } from "../lib/pairing";
 
 const STORAGE_KEY = "cware-hil-ui:connection";
 
@@ -22,6 +23,11 @@ function injectedToken(): string {
 }
 
 function load(): HubConnectionConfig {
+  // A pairing URL (scanned from another device's QR code) wins over everything:
+  // it's an explicit, fresh handoff of host / port / token.
+  const paired = readPairingFromUrl();
+  if (paired) return paired;
+
   const injected = injectedToken();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -58,6 +64,16 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore quota / private-mode errors */
     }
+  }, []);
+
+  // If we booted from a pairing URL, persist that config and clear the token out
+  // of the address bar so it isn't left lingering / re-applied on reload.
+  useEffect(() => {
+    if (readPairingFromUrl()) {
+      setConfig(config);
+      stripPairingFromUrl();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo(() => ({ config, setConfig }), [config, setConfig]);

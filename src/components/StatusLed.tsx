@@ -1,19 +1,19 @@
-import { cn } from "../lib/cn";
+import { cn } from "@/lib/utils";
 
-/** Semantic status tones → text color (the `.led` dot reads `currentColor`). */
+/** Semantic status tones → dot color. */
 const TONE = {
-  live: "text-accent",
-  ok: "text-ok",
-  warn: "text-warn",
-  info: "text-info",
-  danger: "text-danger",
-  idle: "text-ink-faint",
+  live: "bg-emerald-500",
+  ok: "bg-emerald-500",
+  warn: "bg-amber-500",
+  info: "bg-sky-500",
+  danger: "bg-destructive",
+  idle: "bg-muted-foreground",
 } as const;
 
 export type LedTone = keyof typeof TONE;
 
 /**
- * A glowing status light. `pulse` adds an expanding halo for "live" states
+ * A small status dot. `pulse` adds an expanding halo for "live" states
  * (automatically quieted under prefers-reduced-motion via the global rule).
  */
 export function StatusLed({
@@ -26,11 +26,16 @@ export function StatusLed({
   className?: string;
 }) {
   return (
-    <span className={cn("relative inline-flex h-2 w-2 items-center justify-center", TONE[tone], className)}>
+    <span className={cn("relative inline-flex size-2 items-center justify-center", className)}>
       {pulse && (
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
+        <span
+          className={cn(
+            "absolute inline-flex h-full w-full animate-ping rounded-full opacity-60",
+            TONE[tone],
+          )}
+        />
       )}
-      <span className="led" />
+      <span className={cn("inline-block size-2 rounded-full", TONE[tone])} />
     </span>
   );
 }

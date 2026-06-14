@@ -22,10 +22,11 @@ export function OfflineBanner() {
           role="status"
           aria-live="polite"
         >
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-[13px] text-warn">
-            <PlugZap className="h-4 w-4 shrink-0 animate-pulse" />
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[13px] text-amber-600 dark:text-amber-500">
+            <PlugZap className="size-4 shrink-0 animate-pulse" />
             <span>
-              Reconnecting to the hub — live data may be stale and answering is paused until the link is back.
+              Reconnecting to the hub — live data may be stale and answering is paused until the link
+              is back.
             </span>
           </div>
         </motion.div>

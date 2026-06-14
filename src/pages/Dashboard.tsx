@@ -3,14 +3,32 @@ import type { Question, QuestionKind } from "cware-hil-lib";
 import { AnimatePresence, motion } from "motion/react";
 import NumberFlow from "@number-flow/react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Inbox, KeyRound, PlugZap, SearchX, Users } from "lucide-react";
+import { Inbox, KeyRound, ListFilter, PlugZap, Search, SearchX, Users } from "lucide-react";
 import { useHub } from "../hooks/useHub";
 import { QuestionCard } from "../components/QuestionCard";
 import { AgentRow } from "../components/AgentRow";
 import { NotificationsPanel } from "../components/NotificationsPanel";
 import { EmptyState } from "../components/EmptyState";
 import { onUi } from "../lib/bus";
-import { cn } from "../lib/cn";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const KIND_FILTERS: { key: QuestionKind; label: string }[] = [
   { key: "ask_user", label: "ask_user" },
@@ -19,7 +37,11 @@ const KIND_FILTERS: { key: QuestionKind; label: string }[] = [
 ];
 
 type Sort = "newest" | "oldest" | "priority";
-const PRIORITY_RANK: Record<NonNullable<Question["priority"]>, number> = { high: 0, normal: 1, low: 2 };
+const PRIORITY_RANK: Record<NonNullable<Question["priority"]>, number> = {
+  high: 0,
+  normal: 1,
+  low: 2,
+};
 const rank = (q: Question) => PRIORITY_RANK[q.priority ?? "normal"];
 
 export function Dashboard() {
@@ -38,7 +60,9 @@ export function Dashboard() {
     if (kinds.length) list = list.filter((q) => kinds.includes(q.kind));
     if (term)
       list = list.filter((q) =>
-        [q.title, q.prompt, q.approval?.body].filter(Boolean).some((s) => s!.toLowerCase().includes(term)),
+        [q.title, q.prompt, q.approval?.body]
+          .filter(Boolean)
+          .some((s) => s!.toLowerCase().includes(term)),
       );
     const sorted = [...list];
     sorted.sort((a, b) => {
@@ -110,66 +134,76 @@ export function Dashboard() {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
       <section>
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h2 className="font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
-            Pending (<NumberFlow value={visible.length} />)
-          </h2>
-          <div className="ml-auto flex flex-wrap items-center gap-1.5">
-            {KIND_FILTERS.map((f) => (
-              <motion.button
-                key={f.key}
-                type="button"
-                whileTap={{ scale: 0.95 }}
-                onClick={() => toggleKind(f.key)}
-                aria-pressed={kinds.includes(f.key)}
-                className={cn(
-                  "rounded-full border px-2.5 py-0.5 font-mono text-[11px] transition-colors",
-                  kinds.includes(f.key)
-                    ? "border-accent bg-accent/15 text-ink"
-                    : "border-edge text-ink-dim hover:text-ink",
-                )}
-              >
-                {f.label}
-              </motion.button>
-            ))}
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as Sort)}
-              aria-label="Sort questions"
-              className="rounded-md border border-edge bg-well px-2 py-1 text-[11px] text-ink-dim outline-none focus:border-accent"
-            >
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="priority">Priority</option>
-            </select>
-            {filtersActive && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded-md px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-ink-faint hover:text-ink"
-              >
-                Clear
-              </button>
-            )}
-          </div>
+        <div className="mb-4 flex items-baseline gap-2">
+          <h2 className="text-lg font-semibold tracking-tight">Pending</h2>
+          <span className="text-muted-foreground tabular-nums">
+            <NumberFlow value={visible.length} />
+          </span>
         </div>
 
         {enabled && connected && questions.length > 0 && (
-          <input
-            ref={searchRef}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search pending…  ( / )"
-            aria-label="Search pending questions"
-            className="mb-3 w-full rounded-md border border-edge bg-well px-2.5 py-1.5 text-sm text-ink outline-none transition-colors focus:border-accent"
-          />
+          <div className="mb-4 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
+              <Input
+                ref={searchRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search pending…"
+                aria-label="Search pending questions"
+                className="pl-8"
+              />
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" className="shrink-0">
+                  <ListFilter />
+                  Type
+                  {kinds.length > 0 && (
+                    <Badge variant="secondary" className="ml-0.5 px-1.5">
+                      {kinds.length}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuLabel>Filter by type</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {KIND_FILTERS.map((f) => (
+                  <DropdownMenuCheckboxItem
+                    key={f.key}
+                    checked={kinds.includes(f.key)}
+                    onCheckedChange={() => toggleKind(f.key)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {f.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                {filtersActive && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={clearFilters}>Clear filters</DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
+              <SelectTrigger aria-label="Sort questions" className="shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+                <SelectItem value="priority">Priority</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
         {!enabled ? (
-          <EmptyState
-            Icon={KeyRound}
-            action={<SetupLink>Open Setup</SetupLink>}
-          >
+          <EmptyState Icon={KeyRound} action={<SetupLink>Open Setup</SetupLink>}>
             No hub token set. Connect to a hub to start receiving questions.
           </EmptyState>
         ) : !connected ? (
@@ -198,8 +232,11 @@ export function Dashboard() {
 
       <div className="space-y-8">
         <section>
-          <h2 className="mb-3 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
-            Agents (<NumberFlow value={agents.length} />)
+          <h2 className="text-muted-foreground mb-3 flex items-baseline gap-1.5 text-sm font-medium">
+            Agents
+            <span className="tabular-nums">
+              <NumberFlow value={agents.length} />
+            </span>
           </h2>
           {agents.length === 0 ? (
             <EmptyState Icon={Users}>No agents connected yet.</EmptyState>
@@ -221,11 +258,8 @@ export function Dashboard() {
 
 function SetupLink({ children }: { children: React.ReactNode }) {
   return (
-    <a
-      href="#/setup"
-      className="rounded-md border border-accent bg-accent/15 px-3 py-1.5 text-sm text-ink transition-colors hover:bg-accent/25"
-    >
-      {children}
-    </a>
+    <Button asChild size="sm">
+      <a href="#/setup">{children}</a>
+    </Button>
   );
 }

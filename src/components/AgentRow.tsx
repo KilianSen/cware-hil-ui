@@ -7,14 +7,17 @@ import { relativeTime } from "../lib/format";
 import { useHub } from "../hooks/useHub";
 import { useNow } from "../hooks/useNow";
 import { StatusLed, type LedTone } from "./StatusLed";
-import { cn } from "../lib/cn";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 
 const STATUS: Record<Agent["status"], { tone: LedTone; pulse?: boolean; tw: string }> = {
-  idle: { tone: "idle", tw: "text-ink-faint" },
-  working: { tone: "info", pulse: true, tw: "text-info" },
-  waiting: { tone: "warn", pulse: true, tw: "text-warn" },
-  done: { tone: "ok", tw: "text-ok" },
-  error: { tone: "danger", tw: "text-danger" },
+  idle: { tone: "idle", tw: "text-muted-foreground" },
+  working: { tone: "info", pulse: true, tw: "text-sky-500" },
+  waiting: { tone: "warn", pulse: true, tw: "text-amber-500" },
+  done: { tone: "ok", tw: "text-emerald-500" },
+  error: { tone: "danger", tw: "text-destructive" },
 };
 
 export function AgentRow({ agent }: { agent: Agent }) {
@@ -42,28 +45,25 @@ export function AgentRow({ agent }: { agent: Agent }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-      className="rounded-lg border border-edge bg-panel p-3"
+      className="bg-card text-card-foreground group rounded-lg border p-3 shadow-sm"
     >
       <div className="flex items-center gap-2">
         <StatusLed tone={s.tone} pulse={s.pulse} />
-        <span className="truncate font-medium text-ink">
-          {agent.label ?? <span className="font-mono text-ink-dim">{agent.agentId.slice(0, 8)}</span>}
+        <span className="truncate font-medium">
+          {agent.label ?? (
+            <span className="text-muted-foreground font-mono">{agent.agentId.slice(0, 8)}</span>
+          )}
         </span>
-        <span className={cn("font-mono text-[10px] uppercase tracking-wider", s.tw)}>{agent.status}</span>
-        <span className="ml-auto shrink-0 font-mono text-[11px] text-ink-faint">{relativeTime(agent.lastSeen)}</span>
+        <span className={cn("text-xs", s.tw)}>{agent.status}</span>
+        <span className="text-muted-foreground ml-auto shrink-0 text-xs">
+          {relativeTime(agent.lastSeen)}
+        </span>
       </div>
-      {agent.currentTask && <div className="mt-1.5 text-sm text-ink-dim">{agent.currentTask}</div>}
+      {agent.currentTask && <div className="text-muted-foreground mt-1.5 text-sm">{agent.currentTask}</div>}
       {pct !== null && (
         <div className="mt-2 flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-well">
-            <motion.div
-              className="h-full rounded-full bg-accent"
-              initial={false}
-              animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
-            />
-          </div>
-          <span className="w-9 text-right font-mono text-[11px] tabular-nums text-ink-dim">
+          <Progress value={pct} className="h-1.5 flex-1" />
+          <span className="text-muted-foreground w-9 text-right font-mono text-[11px] tabular-nums">
             <NumberFlow value={pct} suffix="%" />
           </span>
         </div>
@@ -79,7 +79,7 @@ export function AgentRow({ agent }: { agent: Agent }) {
             transition={{ duration: 0.18 }}
             className="mt-2 space-y-1.5 overflow-hidden"
           >
-            <textarea
+            <Textarea
               rows={2}
               value={text}
               autoFocus
@@ -89,20 +89,14 @@ export function AgentRow({ agent }: { agent: Agent }) {
                 if (e.key === "Escape") setComposing(false);
               }}
               placeholder="Message to this agent…"
-              className="w-full rounded-md border border-edge bg-well px-2.5 py-1.5 text-sm text-ink outline-none transition-colors focus:border-accent"
             />
-            <div className="flex items-center justify-end gap-2 text-xs">
-              <button type="button" onClick={() => setComposing(false)} className="text-ink-dim hover:text-ink">
+            <div className="flex items-center justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setComposing(false)}>
                 Cancel
-              </button>
-              <motion.button
-                type="button"
-                onClick={send}
-                whileTap={{ scale: 0.96 }}
-                className="inline-flex items-center gap-1 rounded border border-accent bg-accent/15 px-2.5 py-1 text-ink hover:bg-accent/25"
-              >
-                <Send className="h-3 w-3" /> Send
-              </motion.button>
+              </Button>
+              <Button type="button" size="sm" onClick={send}>
+                <Send className="size-3" /> Send
+              </Button>
             </div>
           </motion.div>
         ) : (
@@ -112,23 +106,27 @@ export function AgentRow({ agent }: { agent: Agent }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
-            className="mt-2 flex gap-3 text-xs text-ink-faint"
+            className="mt-2 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
           >
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground h-7 px-2"
               onClick={() => setComposing(true)}
-              className="inline-flex items-center gap-1 hover:text-ink"
             >
-              <MessageSquarePlus className="h-3.5 w-3.5" /> Message
-            </button>
-            <button
+              <MessageSquarePlus className="size-3.5" /> Message
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive h-7 px-2"
               onClick={() => removeAgent(agent.agentId)}
               aria-label={`Remove agent ${agent.label ?? agent.agentId.slice(0, 8)}`}
-              className="inline-flex items-center gap-1 hover:text-danger"
             >
-              <Trash2 className="h-3.5 w-3.5" /> Remove
-            </button>
+              <Trash2 className="size-3.5" /> Remove
+            </Button>
           </motion.div>
         )}
       </AnimatePresence>

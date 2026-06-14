@@ -1,7 +1,8 @@
 import { useConnection } from "../hooks/useConnection";
-import { Tabs } from "../components/Tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeBlock } from "../components/CodeBlock";
 import { ConnectionSettings } from "../components/ConnectionSettings";
+import { PairingQr } from "../components/PairingQr";
 
 export function Setup() {
   const { config } = useConnection();
@@ -24,7 +25,16 @@ export function Setup() {
     `  --header "Authorization: Bearer ${token}"`;
 
   const mcpJson = JSON.stringify(
-    { mcpServers: { hitl: { type: "http", url: mcpUrl, headers: { Authorization: `Bearer ${token}` }, timeout: 86400000 } } },
+    {
+      mcpServers: {
+        hitl: {
+          type: "http",
+          url: mcpUrl,
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 86400000,
+        },
+      },
+    },
     null,
     2,
   );
@@ -32,118 +42,112 @@ export function Setup() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Hub connection</h2>
-        <p className="mb-3 text-sm text-ink-dim">
-          Where this dashboard reaches the hub. In a bundled deployment the host and token are
-          filled in for you — leave them as-is. Point at a different hub by editing the fields below.
+        <h2 className="mb-1 text-base font-medium">
+          Hub connection
+        </h2>
+        <p className="text-muted-foreground mb-3 text-sm">
+          Where this dashboard reaches the hub. In a bundled deployment the host and token are filled
+          in for you — leave them as-is. Point at a different hub by editing the fields below.
         </p>
         <ConnectionSettings />
       </section>
 
       <section>
-        <h2 className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Connect an agent</h2>
-        <p className="mb-3 text-sm text-ink-dim">
-          The hub speaks MCP over Streamable HTTP at <code className="rounded bg-well px-1.5 py-0.5 text-[12.5px]">{mcpUrl}</code>.
-          Point any MCP client at it with the bearer token — Claude Code is just one option.
+        <h2 className="mb-1 text-base font-medium">
+          Connect an agent
+        </h2>
+        <p className="text-muted-foreground mb-3 text-sm">
+          The hub speaks MCP over Streamable HTTP at <Code>{mcpUrl}</Code>. Point any MCP client at it
+          with the bearer token — Claude Code is just one option.
         </p>
-        <Tabs
-          tabs={[
-            {
-              id: "claude",
-              label: "Claude Code",
-              render: () => (
-                <div className="space-y-2">
-                  <p className="text-sm text-ink-dim">Run in your project — writes a project-scoped <code className="rounded bg-well px-1 text-xs">.mcp.json</code>:</p>
-                  <CodeBlock code={claudeCmd} />
-                </div>
-              ),
-            },
-            {
-              id: "json",
-              label: "MCP config (Cursor, Windsurf, …)",
-              render: () => (
-                <div className="space-y-2">
-                  <p className="text-sm text-ink-dim">
-                    The standard <code className="rounded bg-well px-1 text-xs">mcpServers</code> shape — for{" "}
-                    <code className="rounded bg-well px-1 text-xs">.mcp.json</code>,{" "}
-                    <code className="rounded bg-well px-1 text-xs">.cursor/mcp.json</code>, Windsurf, etc.:
-                  </p>
-                  <CodeBlock code={mcpJson} />
-                </div>
-              ),
-            },
-            {
-              id: "raw",
-              label: "Raw endpoint",
-              render: () => (
-                <KV
-                  rows={[
-                    ["Transport", "Streamable HTTP"],
-                    ["Endpoint", mcpUrl],
-                    ["Auth header", `Authorization: Bearer ${token}`],
-                  ]}
-                />
-              ),
-            },
-          ]}
-        />
+        <Tabs defaultValue="claude">
+          <TabsList>
+            <TabsTrigger value="claude">Claude Code</TabsTrigger>
+            <TabsTrigger value="json">MCP config (Cursor, Windsurf, …)</TabsTrigger>
+            <TabsTrigger value="raw">Raw endpoint</TabsTrigger>
+          </TabsList>
+          <TabsContent value="claude" className="space-y-2">
+            <p className="text-muted-foreground text-sm">
+              Run in your project — writes a project-scoped <Code>.mcp.json</Code>:
+            </p>
+            <CodeBlock code={claudeCmd} />
+          </TabsContent>
+          <TabsContent value="json" className="space-y-2">
+            <p className="text-muted-foreground text-sm">
+              The standard <Code>mcpServers</Code> shape — for <Code>.mcp.json</Code>,{" "}
+              <Code>.cursor/mcp.json</Code>, Windsurf, etc.:
+            </p>
+            <CodeBlock code={mcpJson} />
+          </TabsContent>
+          <TabsContent value="raw">
+            <KV
+              rows={[
+                ["Transport", "Streamable HTTP"],
+                ["Endpoint", mcpUrl],
+                ["Auth header", `Authorization: Bearer ${token}`],
+              ]}
+            />
+          </TabsContent>
+        </Tabs>
       </section>
 
       <section>
-        <h2 className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Connect a human UI</h2>
-        <p className="mb-3 text-sm text-ink-dim">
-          Humans answer over the bridge WebSocket at <code className="rounded bg-well px-1.5 py-0.5 text-[12.5px]">{bridgeUrl}</code>.
-          This web dashboard is one client; the Obsidian plugin is another.
+        <h2 className="mb-1 text-base font-medium">
+          Connect a human UI
+        </h2>
+        <p className="text-muted-foreground mb-3 text-sm">
+          Humans answer over the bridge WebSocket at <Code>{bridgeUrl}</Code>. This web dashboard is
+          one client; the Obsidian plugin is another.
         </p>
-        <Tabs
-          tabs={[
-            {
-              id: "web",
-              label: "This dashboard",
-              render: () => (
-                <p className="text-sm text-ink-dim">
-                  Already set up — enter the host, port, and token in the bar above and open the{" "}
-                  <a href="#/" className="text-accent hover:underline">Dashboard</a>.
-                </p>
-              ),
-            },
-            {
-              id: "obsidian",
-              label: "Obsidian plugin",
-              render: () => (
-                <KV
-                  rows={[
-                    ["Host", host],
-                    ["Port", String(port)],
-                    ["Token", token],
-                  ]}
-                />
-              ),
-            },
-            {
-              id: "raw",
-              label: "Raw bridge",
-              render: () => (
-                <div className="space-y-2">
-                  <p className="text-sm text-ink-dim">Connect a WebSocket client (token as a query param), then send a <code className="rounded bg-well px-1 text-xs">hello</code> frame:</p>
-                  <CodeBlock code={`${bridgeUrl}?token=${encodeURIComponent(token)}`} />
-                </div>
-              ),
-            },
-          ]}
-        />
+        <Tabs defaultValue="web">
+          <TabsList>
+            <TabsTrigger value="web">This dashboard</TabsTrigger>
+            <TabsTrigger value="obsidian">Obsidian plugin</TabsTrigger>
+            <TabsTrigger value="raw">Raw bridge</TabsTrigger>
+          </TabsList>
+          <TabsContent value="web" className="space-y-3">
+            <p className="text-muted-foreground text-sm">
+              Already set up — enter the host, port, and token in the bar above and open the{" "}
+              <a href="#/" className="text-primary hover:underline">
+                Dashboard
+              </a>
+              . Or scan to pair another device:
+            </p>
+            <PairingQr />
+          </TabsContent>
+          <TabsContent value="obsidian">
+            <KV
+              rows={[
+                ["Host", host],
+                ["Port", String(port)],
+                ["Token", token],
+              ]}
+            />
+          </TabsContent>
+          <TabsContent value="raw" className="space-y-2">
+            <p className="text-muted-foreground text-sm">
+              Connect a WebSocket client (token as a query param), then send a <Code>hello</Code>{" "}
+              frame:
+            </p>
+            <CodeBlock code={`${bridgeUrl}?token=${encodeURIComponent(token)}`} />
+          </TabsContent>
+        </Tabs>
       </section>
     </div>
   );
 }
 
+function Code({ children }: { children: React.ReactNode }) {
+  return <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-[12.5px]">{children}</code>;
+}
+
 function KV({ rows }: { rows: [string, string][] }) {
   return (
-    <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 rounded-xl border border-edge bg-panel p-4">
+    <div className="bg-card grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 rounded-xl border p-4">
       {rows.map(([k, v]) => (
         <div key={k} className="contents">
-          <span className="text-sm text-ink-faint">{k}</span>
-          <span className="break-all font-mono text-[13px] text-ink">{v}</span>
+          <span className="text-muted-foreground text-sm">{k}</span>
+          <span className="break-all font-mono text-[13px]">{v}</span>
         </div>
       ))}
     </div>

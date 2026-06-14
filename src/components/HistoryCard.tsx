@@ -4,19 +4,19 @@ import { ListChecks, MessageSquare, ShieldCheck } from "lucide-react";
 import { relativeTime } from "../lib/format";
 import { useNow } from "../hooks/useNow";
 import { StatusLed, type LedTone } from "./StatusLed";
-import { cn } from "../lib/cn";
+import { cn } from "@/lib/utils";
 
 const KIND: Record<Question["kind"], { label: string; Icon: typeof MessageSquare }> = {
-  ask_user: { label: "ask_user", Icon: MessageSquare },
-  ask_choice: { label: "ask_choice", Icon: ListChecks },
-  request_approval: { label: "request_approval", Icon: ShieldCheck },
+  ask_user: { label: "Question", Icon: MessageSquare },
+  ask_choice: { label: "Choice", Icon: ListChecks },
+  request_approval: { label: "Approval", Icon: ShieldCheck },
 };
 
 const STATUS: Record<QuestionStatus, { tone: LedTone; tw: string }> = {
-  pending: { tone: "warn", tw: "text-warn" },
-  answered: { tone: "ok", tw: "text-ok" },
-  cancelled: { tone: "idle", tw: "text-ink-faint" },
-  expired: { tone: "danger", tw: "text-danger" },
+  pending: { tone: "warn", tw: "text-amber-500" },
+  answered: { tone: "ok", tw: "text-emerald-500" },
+  cancelled: { tone: "idle", tw: "text-muted-foreground" },
+  expired: { tone: "danger", tw: "text-destructive" },
 };
 
 /** Read-only view of a past question and the human's answer. */
@@ -31,29 +31,31 @@ export function HistoryCard({ question: q }: { question: Question }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-      className="rounded-xl border border-edge bg-panel p-4"
+      className="bg-card text-card-foreground rounded-xl border p-4 shadow-sm"
     >
-      <div className="mb-1 flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded border border-edge bg-well px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-ink-dim">
-          <kind.Icon className="h-3 w-3" />
-          {kind.label}
-        </span>
-        <span className={cn("inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wide", st.tw)}>
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-medium leading-snug">{q.title}</div>
+          <div className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
+            <kind.Icon className="size-3.5" />
+            <span>{kind.label}</span>
+            <span className="text-border">·</span>
+            <span>{relativeTime(q.createdAt)}</span>
+          </div>
+        </div>
+        <span className={cn("flex shrink-0 items-center gap-1.5 text-xs", st.tw)}>
           <StatusLed tone={st.tone} />
           {q.status}
         </span>
-        {q.priority && q.priority !== "normal" && (
-          <span className="font-mono text-[11px] uppercase tracking-wide text-ink-faint">{q.priority}</span>
-        )}
-        <span className="ml-auto font-mono text-[11px] text-ink-faint">{relativeTime(q.createdAt)}</span>
       </div>
-      <div className="mb-1 font-medium text-ink">{q.title}</div>
       {(q.prompt || q.approval?.body) && (
-        <p className="whitespace-pre-wrap text-sm text-ink-dim">{q.prompt ?? q.approval?.body}</p>
+        <p className="text-muted-foreground whitespace-pre-wrap text-sm">
+          {q.prompt ?? q.approval?.body}
+        </p>
       )}
-      <div className="mt-2 border-t border-edge pt-2 text-sm">
-        <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">Answer</span>
-        <div className="mt-0.5 text-ink">{answerSummary(q)}</div>
+      <div className="mt-3 border-t pt-3 text-sm">
+        <span className="text-muted-foreground text-xs">Answer</span>
+        <div className="mt-0.5">{answerSummary(q)}</div>
       </div>
     </motion.div>
   );

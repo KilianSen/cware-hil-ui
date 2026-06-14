@@ -1,7 +1,7 @@
 /**
  * The cware mark: a targeting-reticle ring (the loop) with a center decision node
  * and crosshair ticks (oversight) — "human-in-the-loop control". Inherits color
- * from `currentColor`, so wrap it in `text-accent` to get the signature teal.
+ * from `currentColor`.
  */
 export function BrandMark({ className }: { className?: string }) {
   return (

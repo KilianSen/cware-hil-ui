@@ -5,7 +5,9 @@ import { ArrowUp, KeyRound, PlugZap, Search, SearchX, TriangleAlert } from "luci
 import { useHub } from "../hooks/useHub";
 import { HistoryCard } from "../components/HistoryCard";
 import { EmptyState } from "../components/EmptyState";
-import { cn } from "../lib/cn";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Toggle } from "@/components/ui/toggle";
 
 const STATUS_OPTIONS: QuestionStatus[] = ["answered", "cancelled", "expired", "pending"];
 const PAGE = 30;
@@ -68,35 +70,30 @@ export function History() {
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b border-edge bg-canvas/80 px-4 py-2 backdrop-blur">
+      <div className="bg-background/80 sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b px-4 py-2 backdrop-blur">
         {STATUS_OPTIONS.map((s) => (
-          <motion.button
+          <Toggle
             key={s}
-            type="button"
-            whileTap={{ scale: 0.95 }}
-            onClick={() => toggleStatus(s)}
-            aria-pressed={statuses.includes(s)}
-            className={cn(
-              "rounded-full border px-3 py-1 font-mono text-[11px] uppercase tracking-wide transition-colors",
-              statuses.includes(s)
-                ? "border-accent bg-accent/15 text-ink"
-                : "border-edge text-ink-dim hover:text-ink",
-            )}
+            size="sm"
+            variant="outline"
+            pressed={statuses.includes(s)}
+            onPressedChange={() => toggleStatus(s)}
+            className="h-8 rounded-full px-3 text-xs capitalize"
           >
             {s}
-          </motion.button>
+          </Toggle>
         ))}
-        <span className="font-mono text-[11px] text-ink-faint">
+        <span className="text-muted-foreground text-xs">
           {visible.length} loaded{hasMore ? "+" : ""}
         </span>
         <div className="relative ml-auto w-48">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-faint" />
-          <input
+          <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2" />
+          <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search…"
             aria-label="Search history"
-            className="w-full rounded-md border border-edge bg-well py-1.5 pl-8 pr-2.5 text-sm text-ink outline-none transition-colors focus:border-accent"
+            className="h-8 pl-8"
           />
         </div>
       </div>
@@ -122,15 +119,14 @@ export function History() {
           </AnimatePresence>
           {hasMore && !term && (
             <div className="flex justify-center pt-1">
-              <motion.button
+              <Button
                 type="button"
+                variant="outline"
                 disabled={loading}
-                whileTap={{ scale: 0.96 }}
                 onClick={() => load(rows[rows.length - 1]?.createdAt)}
-                className="rounded-md border border-edge px-4 py-1.5 text-sm text-ink-dim transition-colors hover:border-edge-strong hover:text-ink disabled:opacity-40"
               >
                 {loading ? "Loading…" : `Load ${PAGE} more`}
-              </motion.button>
+              </Button>
             </div>
           )}
         </motion.div>
@@ -138,17 +134,23 @@ export function History() {
 
       <AnimatePresence>
         {showTop && (
-          <motion.button
-            type="button"
+          <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            aria-label="Scroll to top"
-            className="fixed bottom-5 right-5 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-edge-strong bg-panel text-ink-dim shadow-lg shadow-black/30 transition-colors hover:text-ink"
+            className="fixed bottom-5 right-5 z-20"
           >
-            <ArrowUp className="h-4 w-4" />
-          </motion.button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              aria-label="Scroll to top"
+              className="bg-card rounded-full shadow-lg"
+            >
+              <ArrowUp className="size-4" />
+            </Button>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -157,11 +159,8 @@ export function History() {
 
 function SetupLink({ children }: { children: React.ReactNode }) {
   return (
-    <a
-      href="#/setup"
-      className="rounded-md border border-accent bg-accent/15 px-3 py-1.5 text-sm text-ink transition-colors hover:bg-accent/25"
-    >
-      {children}
-    </a>
+    <Button asChild size="sm">
+      <a href="#/setup">{children}</a>
+    </Button>
   );
 }
