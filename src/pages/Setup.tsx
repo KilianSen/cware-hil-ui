@@ -1,7 +1,10 @@
+import type { ReactNode } from "react";
+import { Bell, QrCode, Server, SquareTerminal } from "lucide-react";
 import { useConnection } from "../hooks/useConnection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CodeBlock } from "../components/CodeBlock";
-import { ConnectionSettings } from "../components/ConnectionSettings";
+import { ConnectionSettings, AlertSettings } from "../components/ConnectionSettings";
 import { PairingQr } from "../components/PairingQr";
 
 export function Setup() {
@@ -40,110 +43,135 @@ export function Setup() {
   );
 
   return (
-    <div className="space-y-8">
-      <section>
-        <h2 className="mb-1 text-base font-medium">
-          Hub connection
-        </h2>
-        <p className="text-muted-foreground mb-3 text-sm">
-          Where this dashboard reaches the hub. In a bundled deployment the host and token are filled
-          in for you — leave them as-is. Point at a different hub by editing the fields below.
+    <div className="mx-auto max-w-4xl space-y-5">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">Setup</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Connect this dashboard to your hub, then wire up agents and teammates.
         </p>
+      </div>
+
+      <Step n={1} icon={Server} title="Connect to your hub" desc="Point this dashboard at a running hub.">
         <ConnectionSettings />
-      </section>
+      </Step>
 
-      <section>
-        <h2 className="mb-1 text-base font-medium">
-          Connect an agent
-        </h2>
-        <p className="text-muted-foreground mb-3 text-sm">
-          The hub speaks MCP over Streamable HTTP at <Code>{mcpUrl}</Code>. Point any MCP client at it
-          with the bearer token — Claude Code is just one option.
-        </p>
-        <Tabs defaultValue="claude">
-          <TabsList>
-            <TabsTrigger value="claude">Claude Code</TabsTrigger>
-            <TabsTrigger value="json">MCP config (Cursor, Windsurf, …)</TabsTrigger>
-            <TabsTrigger value="raw">Raw endpoint</TabsTrigger>
-          </TabsList>
-          <TabsContent value="claude" className="space-y-2">
-            <p className="text-muted-foreground text-sm">
-              Run in your project — writes a project-scoped <Code>.mcp.json</Code>:
-            </p>
-            <CodeBlock code={claudeCmd} />
-          </TabsContent>
-          <TabsContent value="json" className="space-y-2">
-            <p className="text-muted-foreground text-sm">
-              The standard <Code>mcpServers</Code> shape — for <Code>.mcp.json</Code>,{" "}
-              <Code>.cursor/mcp.json</Code>, Windsurf, etc.:
-            </p>
-            <CodeBlock code={mcpJson} />
-          </TabsContent>
-          <TabsContent value="raw">
-            <KV
-              rows={[
-                ["Transport", "Streamable HTTP"],
-                ["Endpoint", mcpUrl],
-                ["Auth header", `Authorization: Bearer ${token}`],
-              ]}
-            />
-          </TabsContent>
-        </Tabs>
-      </section>
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        <Step
+          n={2}
+          icon={SquareTerminal}
+          title="Connect an agent"
+          desc="Add the MCP endpoint to any client, with the bearer token."
+        >
+          <Tabs defaultValue="claude">
+            <TabsList>
+              <TabsTrigger value="claude">Claude Code</TabsTrigger>
+              <TabsTrigger value="json">MCP JSON</TabsTrigger>
+              <TabsTrigger value="raw">Raw</TabsTrigger>
+            </TabsList>
+            <TabsContent value="claude" className="mt-3">
+              <CodeBlock code={claudeCmd} />
+            </TabsContent>
+            <TabsContent value="json" className="mt-3">
+              <CodeBlock code={mcpJson} />
+            </TabsContent>
+            <TabsContent value="raw" className="mt-3">
+              <KV
+                rows={[
+                  ["Transport", "Streamable HTTP"],
+                  ["Endpoint", mcpUrl],
+                  ["Auth", `Bearer ${token}`],
+                ]}
+              />
+            </TabsContent>
+          </Tabs>
+        </Step>
 
-      <section>
-        <h2 className="mb-1 text-base font-medium">
-          Connect a human UI
-        </h2>
-        <p className="text-muted-foreground mb-3 text-sm">
-          Humans answer over the bridge WebSocket at <Code>{bridgeUrl}</Code>. This web dashboard is
-          one client; the Obsidian plugin is another.
-        </p>
-        <Tabs defaultValue="web">
-          <TabsList>
-            <TabsTrigger value="web">This dashboard</TabsTrigger>
-            <TabsTrigger value="obsidian">Obsidian plugin</TabsTrigger>
-            <TabsTrigger value="raw">Raw bridge</TabsTrigger>
-          </TabsList>
-          <TabsContent value="web" className="space-y-3">
-            <p className="text-muted-foreground text-sm">
-              Already set up — enter the host, port, and token in the bar above and open the{" "}
-              <a href="#/" className="text-primary hover:underline">
-                Dashboard
-              </a>
-              . Or scan to pair another device:
-            </p>
-            <PairingQr />
-          </TabsContent>
-          <TabsContent value="obsidian">
-            <KV
-              rows={[
-                ["Host", host],
-                ["Port", String(port)],
-                ["Token", token],
-              ]}
-            />
-          </TabsContent>
-          <TabsContent value="raw" className="space-y-2">
-            <p className="text-muted-foreground text-sm">
-              Connect a WebSocket client (token as a query param), then send a <Code>hello</Code>{" "}
-              frame:
-            </p>
-            <CodeBlock code={`${bridgeUrl}?token=${encodeURIComponent(token)}`} />
-          </TabsContent>
-        </Tabs>
-      </section>
+        <Step
+          n={3}
+          icon={QrCode}
+          title="Add another human"
+          desc="Hand the dashboard to a phone, or connect the Obsidian plugin."
+        >
+          <Tabs defaultValue="scan">
+            <TabsList>
+              <TabsTrigger value="scan">Scan to pair</TabsTrigger>
+              <TabsTrigger value="obsidian">Obsidian</TabsTrigger>
+              <TabsTrigger value="raw">Raw bridge</TabsTrigger>
+            </TabsList>
+            <TabsContent value="scan" className="mt-3">
+              <PairingQr />
+            </TabsContent>
+            <TabsContent value="obsidian" className="mt-3">
+              <KV
+                rows={[
+                  ["Host", host],
+                  ["Port", String(port)],
+                  ["Token", token],
+                ]}
+              />
+            </TabsContent>
+            <TabsContent value="raw" className="mt-3 space-y-2">
+              <p className="text-muted-foreground text-sm">
+                Open a WebSocket (token as a query param), then send a <Code>hello</Code> frame:
+              </p>
+              <CodeBlock code={`${bridgeUrl}?token=${encodeURIComponent(token)}`} />
+            </TabsContent>
+          </Tabs>
+        </Step>
+      </div>
+
+      <Step n={4} icon={Bell} title="Alerts" desc="How this dashboard nudges you about new questions.">
+        <AlertSettings />
+      </Step>
     </div>
   );
 }
 
-function Code({ children }: { children: React.ReactNode }) {
-  return <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-[12.5px]">{children}</code>;
+function Step({
+  n,
+  icon: Icon,
+  title,
+  desc,
+  children,
+}: {
+  n: number;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  desc: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start gap-3">
+          <span className="bg-primary/10 text-primary ring-primary/20 flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold ring-1">
+            {n}
+          </span>
+          <div className="min-w-0 space-y-1">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Icon className="text-muted-foreground size-4" />
+              {title}
+            </CardTitle>
+            <CardDescription>{desc}</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
+function Code({ children }: { children: ReactNode }) {
+  return (
+    <code className="bg-muted text-foreground rounded px-1.5 py-0.5 font-mono text-[12px]">
+      {children}
+    </code>
+  );
 }
 
 function KV({ rows }: { rows: [string, string][] }) {
   return (
-    <div className="bg-card grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 rounded-xl border p-4">
+    <div className="bg-muted/40 grid grid-cols-[88px_1fr] gap-x-3 gap-y-2 rounded-lg border p-3.5">
       {rows.map(([k, v]) => (
         <div key={k} className="contents">
           <span className="text-muted-foreground text-sm">{k}</span>

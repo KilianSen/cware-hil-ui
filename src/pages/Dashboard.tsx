@@ -108,10 +108,10 @@ export function Dashboard() {
     field?.focus();
   };
 
-  // j/k to move the cursor, Enter to focus the selected card (disabled in fields).
+  // j/k move the triage cursor between pending cards. Answering itself (number
+  // keys, Enter, A/R, type-to-write) is handled on the selected card.
   useHotkeys("j", moveNext);
   useHotkeys("k", movePrev);
-  useHotkeys("enter", openSelected);
   useHotkeys("/", (e) => {
     e.preventDefault();
     searchRef.current?.focus();
@@ -134,11 +134,18 @@ export function Dashboard() {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
       <section>
-        <div className="mb-4 flex items-baseline gap-2">
-          <h2 className="text-lg font-semibold tracking-tight">Pending</h2>
-          <span className="text-muted-foreground tabular-nums">
+        <div className="mb-4 flex items-center gap-2.5">
+          <h2 className="text-xl font-semibold tracking-tight">Pending</h2>
+          <span className="bg-muted text-muted-foreground inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 font-mono text-xs tabular-nums">
             <NumberFlow value={visible.length} />
           </span>
+          {visible.length > 1 && (
+            <span className="text-muted-foreground ml-auto hidden items-center gap-1 text-xs sm:flex">
+              <kbd>j</kbd>
+              <kbd>k</kbd>
+              <span className="ml-0.5">to move</span>
+            </span>
+          )}
         </div>
 
         {enabled && connected && questions.length > 0 && (
@@ -203,17 +210,29 @@ export function Dashboard() {
         )}
 
         {!enabled ? (
-          <EmptyState Icon={KeyRound} action={<SetupLink>Open Setup</SetupLink>}>
-            No hub token set. Connect to a hub to start receiving questions.
+          <EmptyState
+            Icon={KeyRound}
+            title="Connect your hub"
+            action={<SetupLink>Open Setup</SetupLink>}
+          >
+            No hub token set yet. Add one to start receiving questions from your agents.
           </EmptyState>
         ) : !connected ? (
-          <EmptyState Icon={PlugZap} action={<SetupLink>Check Setup</SetupLink>}>
-            Not connected to the hub.
+          <EmptyState
+            Icon={PlugZap}
+            title="Reconnecting…"
+            action={<SetupLink>Check Setup</SetupLink>}
+          >
+            We can’t reach the hub right now. Answering is paused until the link is back.
           </EmptyState>
         ) : questions.length === 0 ? (
-          <EmptyState Icon={Inbox}>Nothing waiting on you. All clear.</EmptyState>
+          <EmptyState Icon={Inbox} title="All clear">
+            Nothing is waiting on you. New questions from your agents will land here.
+          </EmptyState>
         ) : visible.length === 0 ? (
-          <EmptyState Icon={SearchX}>No questions match the current filters.</EmptyState>
+          <EmptyState Icon={SearchX} title="No matches">
+            No pending questions match the current filters.
+          </EmptyState>
         ) : (
           <motion.div layout className="space-y-3">
             <AnimatePresence initial={false} mode="popLayout">

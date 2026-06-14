@@ -99,17 +99,21 @@ export function History() {
       </div>
 
       {!enabled ? (
-        <EmptyState Icon={KeyRound} action={<SetupLink>Open Setup</SetupLink>}>
-          No hub token set.
+        <EmptyState Icon={KeyRound} title="Connect your hub" action={<SetupLink>Open Setup</SetupLink>}>
+          No hub token set yet.
         </EmptyState>
       ) : !connected ? (
-        <EmptyState Icon={PlugZap} action={<SetupLink>Check Setup</SetupLink>}>
-          Not connected to the hub.
+        <EmptyState Icon={PlugZap} title="Reconnecting…" action={<SetupLink>Check Setup</SetupLink>}>
+          We can’t reach the hub right now.
         </EmptyState>
       ) : error ? (
-        <EmptyState Icon={TriangleAlert}>Couldn’t load history: {error}</EmptyState>
+        <EmptyState Icon={TriangleAlert} title="Couldn’t load history">
+          {error}
+        </EmptyState>
       ) : visible.length === 0 ? (
-        <EmptyState Icon={SearchX}>{loading ? "Loading…" : "No matching history."}</EmptyState>
+        <EmptyState Icon={SearchX} title={loading ? "Loading…" : "Nothing here"}>
+          {loading ? "Fetching past questions…" : "No past questions match these filters."}
+        </EmptyState>
       ) : (
         <motion.div layout className="space-y-3">
           <AnimatePresence initial={false} mode="popLayout">

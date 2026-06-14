@@ -85,12 +85,19 @@ function Shell() {
 
 function Header({ active }: { active: string }) {
   return (
-    <header className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-3 border-b pb-4">
-      <a href="#/" className="flex items-center gap-2 rounded-md">
-        <BrandMark className="text-foreground size-5 shrink-0" />
-        <span className="flex items-baseline gap-1 leading-none">
-          <span className="font-semibold tracking-tight">cware</span>
-          <span className="text-muted-foreground text-sm">/hitl</span>
+    <header className="mb-8 flex flex-wrap items-center gap-x-5 gap-y-3 border-b pb-4">
+      <a href="#/" className="group flex items-center gap-2.5 rounded-md">
+        <span className="bg-primary/10 text-primary ring-primary/25 flex size-9 items-center justify-center rounded-xl ring-1 transition-colors group-hover:bg-primary/15">
+          <BrandMark className="size-5" />
+        </span>
+        <span className="flex flex-col leading-none">
+          <span className="flex items-baseline gap-1">
+            <span className="text-[15px] font-semibold tracking-tight">cware</span>
+            <span className="text-muted-foreground font-mono text-xs">hitl</span>
+          </span>
+          <span className="text-muted-foreground/80 mt-1 text-[10.5px] tracking-wide">
+            human-in-the-loop
+          </span>
         </span>
       </a>
 

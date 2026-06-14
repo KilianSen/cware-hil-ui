@@ -14,5 +14,5 @@ export function applyTheme(pref: ThemePref): void {
   const mode = resolveTheme(pref);
   document.documentElement.dataset.theme = mode;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", mode === "dark" ? "#0a0a0a" : "#ffffff");
+  if (meta) meta.setAttribute("content", mode === "dark" ? "#15141b" : "#fbfbfe");
 }

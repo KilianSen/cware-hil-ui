@@ -31,7 +31,7 @@ export function HistoryCard({ question: q }: { question: Question }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-      className="bg-card text-card-foreground rounded-xl border p-4 shadow-sm"
+      className="bg-card text-card-foreground rounded-xl border p-4 shadow-sm transition-all hover:shadow-md"
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">

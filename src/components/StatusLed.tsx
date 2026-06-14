@@ -35,7 +35,7 @@ export function StatusLed({
           )}
         />
       )}
-      <span className={cn("inline-block size-2 rounded-full", TONE[tone])} />
+      <span className={cn("inline-block size-2 rounded-full", TONE[tone], tone !== "idle" && "signal")} />
     </span>
   );
 }

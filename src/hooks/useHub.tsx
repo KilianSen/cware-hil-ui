@@ -82,15 +82,29 @@ function useHubClient(config: HubConnectionConfig): HubState {
 
   const client = clientRef.current;
 
+  // Optimistic resolution: when we answer/dismiss, the hub only removes the
+  // question from the list once it echoes the status change back. To make the
+  // queue feel instant (and prevent a double-submit), we hide the id locally the
+  // moment we act. The set self-prunes — and self-heals on reconnect — because we
+  // drop any id the hub still reports as pending.
+  const resolvedRef = useRef<Set<string>>(new Set());
+  const resolveOptimistically = (id: string) => {
+    resolvedRef.current.add(id);
+    bump();
+  };
+
   // `bump()` increments `version` on every bridge change; recompute the snapshots
   // whenever it (or the connection state) changes.
-  const questions = useMemo(
-    () =>
-      [...client.questions.values()]
-        .filter((q) => q.status === "pending")
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-    [client, version, connected],
-  );
+  const questions = useMemo(() => {
+    const resolved = resolvedRef.current;
+    for (const id of resolved) {
+      const q = client.questions.get(id);
+      if (!q || q.status !== "pending") resolved.delete(id);
+    }
+    return [...client.questions.values()]
+      .filter((q) => q.status === "pending" && !resolved.has(q.id))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }, [client, version, connected]);
   const agents = useMemo(
     () => [...client.agents.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
     [client, version, connected],
@@ -110,8 +124,14 @@ function useHubClient(config: HubConnectionConfig): HubState {
     notificationHistory,
     serverVersion: connected ? client.serverVersion : null,
     serverProtocolVersion: connected ? client.serverProtocolVersion : null,
-    submitAnswer: (a) => client.submitAnswer(a),
-    cancelQuestion: (id) => client.cancelQuestion(id),
+    submitAnswer: (a) => {
+      client.submitAnswer(a);
+      resolveOptimistically(a.questionId);
+    },
+    cancelQuestion: (id) => {
+      client.cancelQuestion(id);
+      resolveOptimistically(id);
+    },
     dismissNotification: (id) => setNotifications((prev) => prev.filter((n) => n.id !== id)),
     clearNotifications: () => {
       client.notifications.length = 0;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Answer, Question } from "cware-hil-lib";
 import { motion } from "motion/react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -36,6 +36,7 @@ export function QuestionCard({
   const now = () => new Date().toISOString();
   const kind = KIND[question.kind];
   const high = question.priority === "high";
+  const active = selected && connected;
 
   return (
     <motion.div
@@ -47,7 +48,7 @@ export function QuestionCard({
       exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.15 } }}
       transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
       className={cn(
-        "bg-card text-card-foreground rounded-xl border p-4 shadow-sm transition-shadow",
+        "bg-card text-card-foreground rounded-xl border p-4 shadow-sm transition-all hover:shadow-md",
         high && "border-l-2 border-l-destructive",
         selected && "ring-ring ring-2 ring-offset-2 ring-offset-background",
       )}
@@ -79,6 +80,7 @@ export function QuestionCard({
         <AskUser
           prompt={question.prompt}
           disabled={!connected}
+          active={active}
           onSubmit={(text) =>
             send({ questionId: question.id, kind: "ask_user", text, answeredAt: now() })
           }
@@ -88,6 +90,7 @@ export function QuestionCard({
         <AskChoice
           question={question}
           disabled={!connected}
+          active={active}
           onSubmit={(choiceIds, text) =>
             send({ questionId: question.id, kind: "ask_choice", choiceIds, text, answeredAt: now() })
           }
@@ -97,6 +100,7 @@ export function QuestionCard({
         <Approval
           question={question}
           disabled={!connected}
+          active={active}
           onDecide={(decision, comment) =>
             send({
               questionId: question.id,
@@ -117,8 +121,9 @@ export function QuestionCard({
         )}
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
+          className="text-muted-foreground"
           onClick={() => cancelQuestion(question.id)}
           aria-label="Dismiss question"
         >
@@ -139,35 +144,70 @@ function submitChord(e: React.KeyboardEvent, run: () => void) {
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="bg-muted text-muted-foreground ml-1 rounded border px-1 py-0.5 font-mono text-[10px] leading-none">
+    <kbd className="bg-muted text-muted-foreground rounded border px-1.5 py-0.5 font-mono text-[10px] leading-none">
       {children}
     </kbd>
+  );
+}
+
+/** A subtle one-line keyboard hint, shown only on the selected card. */
+function Hint({ show, children }: { show: boolean; children: React.ReactNode }) {
+  if (!show) return null;
+  return (
+    <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">{children}</div>
   );
 }
 
 function AskUser({
   prompt,
   disabled,
+  active,
   onSubmit,
 }: {
   prompt?: string;
   disabled?: boolean;
+  active: boolean;
   onSubmit: (text: string) => void;
 }) {
   const [text, setText] = useState("");
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const sent = useRef(false);
+  const submit = () => {
+    if (sent.current) return;
+    sent.current = true;
+    onSubmit(text);
+  };
+
+  // When the card is selected, Enter drops you straight into the answer field.
+  useHotkeys(
+    "enter",
+    (e) => {
+      e.preventDefault();
+      ref.current?.focus();
+    },
+    { enabled: active && !disabled, enableOnFormTags: false },
+    [active, disabled],
+  );
+
   return (
     <div className="space-y-2">
       {prompt && <p className="text-muted-foreground whitespace-pre-wrap text-sm">{prompt}</p>}
       <Textarea
+        ref={ref}
         rows={3}
         value={text}
         disabled={disabled}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => submitChord(e, () => onSubmit(text))}
+        onKeyDown={(e) => submitChord(e, submit)}
         placeholder="Type your answer…"
       />
-      <div className="flex justify-end">
-        <Button type="button" size="sm" disabled={disabled} onClick={() => onSubmit(text)}>
+      <div className="flex items-center justify-between gap-2">
+        <Hint show={active}>
+          <Kbd>↵</Kbd> to write
+          <span className="text-border">·</span>
+          <Kbd>⌘↵</Kbd> send
+        </Hint>
+        <Button type="button" size="sm" disabled={disabled} onClick={submit}>
           Submit
           <Kbd>⌘↵</Kbd>
         </Button>
@@ -179,21 +219,50 @@ function AskUser({
 function AskChoice({
   question,
   disabled,
+  active,
   onSubmit,
 }: {
   question: Question;
   disabled?: boolean;
+  active: boolean;
   onSubmit: (choiceIds: string[], note?: string) => void;
 }) {
   const multi = question.multi ?? false;
   const [selected, setSelected] = useState<string[]>([]);
   const [note, setNote] = useState("");
-
-  const toggle = (id: string) =>
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-
-  const submit = () => onSubmit(selected, note.trim() || undefined);
+  const sent = useRef(false);
   const choices = question.choices ?? [];
+
+  const toggle = (id: string) => {
+    if (multi) setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+    else setSelected([id]);
+  };
+  const submit = () => {
+    if (sent.current || selected.length === 0) return;
+    sent.current = true;
+    onSubmit(selected, note.trim() || undefined);
+  };
+
+  // Number keys pick a choice; Enter submits — both only on the selected card,
+  // and never while typing in the note field (enableOnFormTags: false).
+  useHotkeys(
+    ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    (e) => {
+      const c = choices[Number(e.key) - 1];
+      if (c) toggle(c.id);
+    },
+    { enabled: active && !disabled, enableOnFormTags: false },
+    [active, disabled, choices, multi],
+  );
+  useHotkeys(
+    "enter",
+    (e) => {
+      e.preventDefault();
+      submit();
+    },
+    { enabled: active && !disabled, enableOnFormTags: false },
+    [active, disabled, selected, note],
+  );
 
   return (
     <div className="space-y-2">
@@ -203,12 +272,12 @@ function AskChoice({
 
       {multi ? (
         <div role="group" aria-label="Choices" className="space-y-1">
-          {choices.map((c) => {
+          {choices.map((c, i) => {
             const id = `q-${question.id}-${c.id}`;
             return (
               <div
                 key={c.id}
-                className="hover:bg-accent flex items-center gap-2 rounded-md px-1.5 py-1 text-sm"
+                className="hover:bg-accent flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-sm"
               >
                 <Checkbox
                   id={id}
@@ -216,7 +285,8 @@ function AskChoice({
                   disabled={disabled}
                   onCheckedChange={() => toggle(c.id)}
                 />
-                <Label htmlFor={id} className="flex-1 cursor-pointer font-normal">
+                <Label htmlFor={id} className="flex flex-1 cursor-pointer items-center gap-2 font-normal">
+                  {i < 9 && <ChoiceKey>{i + 1}</ChoiceKey>}
                   {c.label}
                 </Label>
               </div>
@@ -231,15 +301,16 @@ function AskChoice({
           disabled={disabled}
           className="gap-1"
         >
-          {choices.map((c) => {
+          {choices.map((c, i) => {
             const id = `q-${question.id}-${c.id}`;
             return (
               <div
                 key={c.id}
-                className="hover:bg-accent flex items-center gap-2 rounded-md px-1.5 py-1 text-sm"
+                className="hover:bg-accent flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-sm"
               >
                 <RadioGroupItem id={id} value={c.id} />
-                <Label htmlFor={id} className="flex-1 cursor-pointer font-normal">
+                <Label htmlFor={id} className="flex flex-1 cursor-pointer items-center gap-2 font-normal">
+                  {i < 9 && <ChoiceKey>{i + 1}</ChoiceKey>}
                   {c.label}
                 </Label>
               </div>
@@ -256,46 +327,63 @@ function AskChoice({
         onKeyDown={(e) => submitChord(e, submit)}
         placeholder="Add a note (optional)…"
       />
-      <div className="flex justify-end">
-        <Button type="button" size="sm" disabled={disabled} onClick={submit}>
+      <div className="flex items-center justify-between gap-2">
+        <Hint show={active}>
+          <Kbd>{choices.length > 1 ? `1–${Math.min(choices.length, 9)}` : "1"}</Kbd> choose
+          <span className="text-border">·</span>
+          <Kbd>↵</Kbd> submit
+        </Hint>
+        <Button type="button" size="sm" disabled={disabled || selected.length === 0} onClick={submit}>
           Submit
-          <Kbd>⌘↵</Kbd>
+          <Kbd>↵</Kbd>
         </Button>
       </div>
     </div>
   );
 }
 
+function ChoiceKey({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="bg-muted text-muted-foreground inline-flex size-4 shrink-0 items-center justify-center rounded font-mono text-[10px] leading-none">
+      {children}
+    </span>
+  );
+}
+
 function Approval({
   question,
   disabled,
+  active,
   onDecide,
 }: {
   question: Question;
   disabled?: boolean;
+  active: boolean;
   onDecide: (decision: "approve" | "reject", comment?: string) => void;
 }) {
   const [comment, setComment] = useState("");
   const a = question.approval;
-  const commentOpt = () => comment.trim() || undefined;
+  const sent = useRef(false);
+  const decide = (decision: "approve" | "reject") => {
+    if (sent.current) return;
+    sent.current = true;
+    onDecide(decision, comment.trim() || undefined);
+  };
 
-  // `a`/`r` while the card is focused (not while typing in the comment field).
-  const hotRef = useHotkeys<HTMLDivElement>(
-    "a, r",
-    (_e, h) => {
-      if (disabled) return;
-      if (h.keys?.includes("r")) onDecide("reject", commentOpt());
-      else onDecide("approve", commentOpt());
-    },
-    { preventDefault: true },
-  );
+  // A / R decide on the selected card — never while typing in the comment.
+  useHotkeys("a", () => decide("approve"), { enabled: active && !disabled, enableOnFormTags: false }, [
+    active,
+    disabled,
+    comment,
+  ]);
+  useHotkeys("r", () => decide("reject"), { enabled: active && !disabled, enableOnFormTags: false }, [
+    active,
+    disabled,
+    comment,
+  ]);
 
   return (
-    <div
-      ref={hotRef}
-      tabIndex={-1}
-      className="focus-visible:ring-ring space-y-2 rounded-lg outline-none focus-visible:ring-2"
-    >
+    <div className="space-y-2">
       {a?.body && <p className="text-muted-foreground whitespace-pre-wrap text-sm">{a.body}</p>}
       {a?.diff && (
         <pre className="bg-muted text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all rounded-lg border p-3 font-mono text-[12px]">
@@ -309,27 +397,34 @@ function Approval({
         onChange={(e) => setComment(e.target.value)}
         placeholder="Comment (optional)…"
       />
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          disabled={disabled}
-          onClick={() => onDecide("reject", commentOpt())}
-        >
-          Reject
-          <Kbd>R</Kbd>
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={disabled}
-          onClick={() => onDecide("approve", commentOpt())}
-          className="bg-emerald-600 text-white hover:bg-emerald-600/90"
-        >
-          Approve
-          <Kbd>A</Kbd>
-        </Button>
+      <div className="flex items-center justify-between gap-2">
+        <Hint show={active}>
+          <Kbd>A</Kbd> approve
+          <span className="text-border">·</span>
+          <Kbd>R</Kbd> reject
+        </Hint>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={disabled}
+            onClick={() => decide("reject")}
+          >
+            Reject
+            <Kbd>R</Kbd>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={disabled}
+            onClick={() => decide("approve")}
+            className="bg-emerald-600 text-white hover:bg-emerald-600/90"
+          >
+            Approve
+            <Kbd>A</Kbd>
+          </Button>
+        </div>
       </div>
     </div>
   );

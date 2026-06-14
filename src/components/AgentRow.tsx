@@ -45,7 +45,7 @@ export function AgentRow({ agent }: { agent: Agent }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-      className="bg-card text-card-foreground group rounded-lg border p-3 shadow-sm"
+      className="bg-card text-card-foreground group rounded-lg border p-3 shadow-sm transition-all hover:shadow-md"
     >
       <div className="flex items-center gap-2">
         <StatusLed tone={s.tone} pulse={s.pulse} />
