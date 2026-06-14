@@ -19,6 +19,9 @@ RUN npm run build
 FROM nginx:alpine AS runner
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
+# Writes runtime-config.js from CC_HITL_TOKEN at container start (token auto-populate).
+COPY docker-entrypoint.d/30-runtime-config.sh /docker-entrypoint.d/30-runtime-config.sh
+RUN chmod +x /docker-entrypoint.d/30-runtime-config.sh
 # Fail the build early if the nginx config is malformed.
 RUN nginx -t
 EXPOSE 80

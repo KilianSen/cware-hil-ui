@@ -10,7 +10,19 @@ const DEFAULT_CONFIG: HubConnectionConfig = {
   token: "",
 };
 
+/**
+ * Token injected by the deployment at runtime (Docker writes runtime-config.js
+ * from CC_HITL_TOKEN). Empty in dev / when the env var is unset. Used to
+ * auto-populate the token field on first load.
+ */
+function injectedToken(): string {
+  if (typeof window === "undefined") return "";
+  const t = (window as unknown as { __CC_HITL_TOKEN__?: unknown }).__CC_HITL_TOKEN__;
+  return typeof t === "string" ? t : "";
+}
+
 function load(): HubConnectionConfig {
+  const injected = injectedToken();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -18,13 +30,15 @@ function load(): HubConnectionConfig {
       return {
         host: v.host ?? DEFAULT_CONFIG.host,
         port: typeof v.port === "number" ? v.port : DEFAULT_CONFIG.port,
-        token: v.token ?? "",
+        // Prefer a token the user already entered; otherwise fall back to the
+        // deployment-injected one so the field is pre-filled.
+        token: v.token || injected,
       };
     }
   } catch {
     /* ignore corrupt storage */
   }
-  return DEFAULT_CONFIG;
+  return { ...DEFAULT_CONFIG, token: injected };
 }
 
 interface ConnectionContextValue {
