@@ -133,7 +133,15 @@ export class HubClient {
     const { host, port, token } = this.cfg;
     // An https-served UI must reach the hub over wss (TLS); otherwise plain ws.
     const scheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const url = `${scheme}://${host}:${port}/bridge?token=${encodeURIComponent(token)}`;
+    // Standard deployment: the UI is served by the hub's own reverse proxy, so
+    // the bridge is same-origin. When the configured host is the page's host,
+    // reuse the page's authority (host + port, with default ports like 443/80
+    // omitted) — so a TLS-fronted single-port deploy works without the user
+    // pinning a port. A *different* host (e.g. a hub on 127.0.0.1 in dev) still
+    // uses the explicit host:port.
+    const authority =
+      host === window.location.hostname ? window.location.host : `${host}:${port}`;
+    const url = `${scheme}://${authority}/bridge?token=${encodeURIComponent(token)}`;
     let ws: WebSocket;
     try {
       ws = new WebSocket(url);
