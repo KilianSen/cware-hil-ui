@@ -8,9 +8,11 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import type { Agent, Answer, Notification, Question } from "cware-hil-lib";
-import { HubClient, type HubConnectionConfig } from "../lib/hubClient";
+import type { Agent, Answer, HistoryFilter, Notification, Question } from "cware-hil-lib";
+import { HubClient, type HubConnectionConfig, type HistoryResult } from "../lib/hubClient";
 import { useConnection } from "./useConnection";
+import { useSettings } from "./useSettings";
+import { osNotify, playBeep } from "../lib/alerts";
 
 export interface HubState {
   connected: boolean;
@@ -18,10 +20,16 @@ export interface HubState {
   enabled: boolean;
   questions: Question[];
   agents: Agent[];
+  /** Ephemeral toast queue (live notifications since page load). */
   notifications: Notification[];
+  /** Persistent notification history (seeded from the snapshot). */
+  notificationHistory: Notification[];
   submitAnswer: (answer: Answer) => void;
   cancelQuestion: (questionId: string) => void;
   dismissNotification: (id: string) => void;
+  sendToAgent: (agentId: string, text: string) => void;
+  removeAgent: (agentId: string) => void;
+  requestHistory: (filter: HistoryFilter) => Promise<HistoryResult>;
 }
 
 const HubContext = createContext<HubState | null>(null);
@@ -31,12 +39,23 @@ function useHubClient(config: HubConnectionConfig): HubState {
   const [version, bump] = useReducer((x: number) => x + 1, 0);
   const [connected, setConnected] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { settings } = useSettings();
+  // Keep the latest settings readable from client callbacks without re-binding them.
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
   if (!clientRef.current) {
     const client = new HubClient(config);
     client.onChange = () => bump();
     client.onConnectionChange = (c) => setConnected(c);
-    client.onNotify = (n) => setNotifications((prev) => [...prev, n].slice(-50));
+    client.onNotify = (n) => {
+      setNotifications((prev) => [...prev, n].slice(-50));
+      if (settingsRef.current.osNotifications) osNotify("cc-hitl", n.message);
+    };
+    client.onQuestionCreated = (q) => {
+      if (settingsRef.current.soundOnQuestion) playBeep();
+      if (settingsRef.current.osNotifications) osNotify("New question", q.title);
+    };
     clientRef.current = client;
   }
 
@@ -68,6 +87,11 @@ function useHubClient(config: HubConnectionConfig): HubState {
     () => [...client.agents.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
     [client, version, connected],
   );
+  // Newest-first persistent history mirror.
+  const notificationHistory = useMemo(
+    () => [...client.notifications].reverse(),
+    [client, version, connected],
+  );
 
   return {
     connected,
@@ -75,9 +99,13 @@ function useHubClient(config: HubConnectionConfig): HubState {
     questions,
     agents,
     notifications,
+    notificationHistory,
     submitAnswer: (a) => client.submitAnswer(a),
     cancelQuestion: (id) => client.cancelQuestion(id),
     dismissNotification: (id) => setNotifications((prev) => prev.filter((n) => n.id !== id)),
+    sendToAgent: (agentId, text) => client.sendToAgent(agentId, text),
+    removeAgent: (agentId) => client.removeAgent(agentId),
+    requestHistory: (filter) => client.requestHistory(filter),
   };
 }
 

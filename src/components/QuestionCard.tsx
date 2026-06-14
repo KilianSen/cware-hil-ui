@@ -1,24 +1,51 @@
 import { useState } from "react";
 import type { Answer, Question } from "cware-hil-lib";
+import { motion } from "motion/react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { ListChecks, MessageSquare, ShieldCheck, X } from "lucide-react";
 import { useHub } from "../hooks/useHub";
+import { cn } from "../lib/cn";
 
-const KIND_LABEL: Record<Question["kind"], string> = {
-  ask_user: "ask user",
-  ask_choice: "ask choice",
-  request_approval: "request approval",
+const KIND: Record<Question["kind"], { label: string; Icon: typeof MessageSquare }> = {
+  ask_user: { label: "ask user", Icon: MessageSquare },
+  ask_choice: { label: "ask choice", Icon: ListChecks },
+  request_approval: { label: "request approval", Icon: ShieldCheck },
 };
 
 export function QuestionCard({ question, agentLabel }: { question: Question; agentLabel?: string }) {
   const { submitAnswer, cancelQuestion } = useHub();
   const send = (a: Answer) => submitAnswer(a);
   const now = () => new Date().toISOString();
+  const kind = KIND[question.kind];
+  const high = question.priority === "high";
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.15 } }}
+      transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+      className={cn(
+        "rounded-xl border bg-zinc-900 p-4",
+        high ? "border-l-2 border-l-prio-high border-zinc-800" : "border-zinc-800",
+      )}
+    >
       <div className="mb-1 flex items-center gap-2">
-        <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-zinc-400">
-          {KIND_LABEL[question.kind]}
+        <span className="inline-flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-zinc-400">
+          <kind.Icon className="h-3 w-3" />
+          {kind.label}
         </span>
+        {question.priority && question.priority !== "normal" && (
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide",
+              question.priority === "high" ? "bg-red-500/20 text-red-300" : "bg-zinc-800 text-zinc-400",
+            )}
+          >
+            {question.priority}
+          </span>
+        )}
         {agentLabel && <span className="text-xs text-zinc-500">{agentLabel}</span>}
       </div>
       <div className="mb-2 font-medium text-zinc-100">{question.title}</div>
@@ -44,22 +71,35 @@ export function QuestionCard({ question, agentLabel }: { question: Question; age
       )}
 
       <div className="mt-3 flex justify-end">
-        <button
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.96 }}
           onClick={() => cancelQuestion(question.id)}
-          className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-100"
+          className="inline-flex items-center gap-1 rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:text-zinc-100"
         >
-          Dismiss
-        </button>
+          <X className="h-3.5 w-3.5" /> Dismiss
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 const textareaCls =
-  "w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-violet-500";
+  "w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors focus:border-violet-500";
 const primaryCls =
-  "rounded-md border border-violet-500 bg-violet-500/15 px-3 py-1.5 text-sm text-zinc-100 hover:bg-violet-500/25";
+  "inline-flex items-center gap-1.5 rounded-md border border-violet-500 bg-violet-500/15 px-3 py-1.5 text-sm text-zinc-100 hover:bg-violet-500/25";
+
+/** ⌘/Ctrl+Enter to submit from a textarea. */
+function submitChord(e: React.KeyboardEvent, run: () => void) {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    run();
+  }
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return <kbd className="ml-1">{children}</kbd>;
+}
 
 function AskUser({ prompt, onSubmit }: { prompt?: string; onSubmit: (text: string) => void }) {
   const [text, setText] = useState("");
@@ -70,13 +110,14 @@ function AskUser({ prompt, onSubmit }: { prompt?: string; onSubmit: (text: strin
         rows={3}
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => submitChord(e, () => onSubmit(text))}
         placeholder="Type your answer…"
         className={textareaCls}
       />
       <div className="flex justify-end">
-        <button type="button" className={primaryCls} onClick={() => onSubmit(text)}>
-          Submit
-        </button>
+        <motion.button type="button" whileTap={{ scale: 0.96 }} className={primaryCls} onClick={() => onSubmit(text)}>
+          Submit<Kbd>⌘↵</Kbd>
+        </motion.button>
       </div>
     </div>
   );
@@ -98,12 +139,14 @@ function AskChoice({
     else setSelected([id]);
   };
 
+  const submit = () => onSubmit(selected, note.trim() || undefined);
+
   return (
     <div className="space-y-2">
       {question.prompt && <p className="whitespace-pre-wrap text-sm text-zinc-400">{question.prompt}</p>}
       <div className="space-y-1">
         {(question.choices ?? []).map((c) => (
-          <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm text-zinc-200">
+          <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-sm text-zinc-200 transition-colors hover:bg-zinc-800/50">
             <input
               type={multi ? "checkbox" : "radio"}
               name={`q-${question.id}`}
@@ -119,17 +162,14 @@ function AskChoice({
         rows={2}
         value={note}
         onChange={(e) => setNote(e.target.value)}
+        onKeyDown={(e) => submitChord(e, submit)}
         placeholder="Add a note (optional)…"
         className={textareaCls}
       />
       <div className="flex justify-end">
-        <button
-          type="button"
-          className={primaryCls}
-          onClick={() => onSubmit(selected, note.trim() || undefined)}
-        >
-          Submit
-        </button>
+        <motion.button type="button" whileTap={{ scale: 0.96 }} className={primaryCls} onClick={submit}>
+          Submit<Kbd>⌘↵</Kbd>
+        </motion.button>
       </div>
     </div>
   );
@@ -144,8 +184,20 @@ function Approval({
 }) {
   const [comment, setComment] = useState("");
   const a = question.approval;
+  const commentOpt = () => comment.trim() || undefined;
+
+  // `a`/`r` while the card is focused (not while typing in the comment field).
+  const hotRef = useHotkeys<HTMLDivElement>(
+    "a, r",
+    (_e, h) => {
+      if (h.keys?.includes("r")) onDecide("reject", commentOpt());
+      else onDecide("approve", commentOpt());
+    },
+    { preventDefault: true },
+  );
+
   return (
-    <div className="space-y-2">
+    <div ref={hotRef} tabIndex={-1} className="space-y-2 outline-none">
       {a?.body && <p className="whitespace-pre-wrap text-sm text-zinc-400">{a.body}</p>}
       {a?.diff && (
         <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-zinc-800 bg-zinc-950 p-3 font-mono text-[12px] text-zinc-300">
@@ -160,20 +212,22 @@ function Approval({
         className={textareaCls}
       />
       <div className="flex justify-end gap-2">
-        <button
+        <motion.button
           type="button"
-          onClick={() => onDecide("reject", comment.trim() || undefined)}
-          className="rounded-md border border-red-500/60 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/15"
+          whileTap={{ scale: 0.96 }}
+          onClick={() => onDecide("reject", commentOpt())}
+          className="inline-flex items-center gap-1 rounded-md border border-red-500/60 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/15"
         >
-          Reject
-        </button>
-        <button
+          Reject<Kbd>R</Kbd>
+        </motion.button>
+        <motion.button
           type="button"
-          onClick={() => onDecide("approve", comment.trim() || undefined)}
-          className="rounded-md border border-emerald-500 bg-emerald-500/15 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-500/25"
+          whileTap={{ scale: 0.96 }}
+          onClick={() => onDecide("approve", commentOpt())}
+          className="inline-flex items-center gap-1 rounded-md border border-emerald-500 bg-emerald-500/15 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-500/25"
         >
-          Approve
-        </button>
+          Approve<Kbd>A</Kbd>
+        </motion.button>
       </div>
     </div>
   );

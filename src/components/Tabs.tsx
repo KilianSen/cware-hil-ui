@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { motion } from "motion/react";
+import { cn } from "../lib/cn";
 
 export interface TabDef {
   id: string;
@@ -14,21 +16,29 @@ export function Tabs({ tabs }: { tabs: TabDef[] }) {
   return (
     <div>
       <div className="mb-2 flex flex-wrap gap-1.5">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setActive(t.id)}
-            className={
-              "rounded-md border px-2.5 py-1.5 text-[13px] transition-colors " +
-              (t.id === current.id
-                ? "border-violet-500 bg-violet-500/15 text-zinc-100"
-                : "border-zinc-700 text-zinc-400 hover:text-zinc-100")
-            }
-          >
-            {t.label}
-          </button>
-        ))}
+        {tabs.map((t) => {
+          const isActive = t.id === current.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActive(t.id)}
+              className={cn(
+                "relative rounded-md border border-zinc-800 px-2.5 py-1.5 text-[13px] transition-colors",
+                isActive ? "text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
+              )}
+            >
+              {isActive && (
+                <motion.span
+                  layoutId="tab-active"
+                  className="absolute inset-0 -z-0 rounded-md bg-violet-500/15 ring-1 ring-violet-500/40"
+                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                />
+              )}
+              <span className="relative z-10">{t.label}</span>
+            </button>
+          );
+        })}
       </div>
       <div>{current.render()}</div>
     </div>

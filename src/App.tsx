@@ -1,18 +1,25 @@
+import { AnimatePresence, motion } from "motion/react";
+import { Bot } from "lucide-react";
 import { ConnectionProvider } from "./hooks/useConnection";
+import { SettingsProvider } from "./hooks/useSettings";
 import { HubProvider } from "./hooks/useHub";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { ConnectionBar } from "./components/ConnectionBar";
 import { Toasts } from "./components/Toasts";
 import { Dashboard } from "./pages/Dashboard";
+import { History } from "./pages/History";
 import { Setup } from "./pages/Setup";
+import { cn } from "./lib/cn";
 
 export function App() {
   return (
     <ConnectionProvider>
-      <HubProvider>
-        <Shell />
-        <Toasts />
-      </HubProvider>
+      <SettingsProvider>
+        <HubProvider>
+          <Shell />
+          <Toasts />
+        </HubProvider>
+      </SettingsProvider>
     </ConnectionProvider>
   );
 }
@@ -20,16 +27,24 @@ export function App() {
 function Shell() {
   const route = useHashRoute();
   const onSetup = route.startsWith("/setup");
+  const onHistory = route.startsWith("/history");
+  const key = onSetup ? "setup" : onHistory ? "history" : "dashboard";
 
   return (
-    <div className="min-h-full bg-zinc-950 text-zinc-100">
+    <div className="min-h-full font-sans text-zinc-100">
       <div className="mx-auto max-w-4xl px-4 py-8">
         <header className="mb-5">
           <div className="flex items-baseline justify-between">
-            <h1 className="text-xl font-semibold">Human-in-the-loop hub</h1>
+            <h1 className="flex items-center gap-2 text-xl font-semibold">
+              <Bot className="h-5 w-5 self-center text-violet-400" />
+              Human-in-the-loop hub
+            </h1>
             <nav className="flex gap-1 text-sm">
-              <NavLink href="#/" active={!onSetup}>
+              <NavLink href="#/" active={!onSetup && !onHistory}>
                 Dashboard
+              </NavLink>
+              <NavLink href="#/history" active={onHistory}>
+                History
               </NavLink>
               <NavLink href="#/setup" active={onSetup}>
                 Setup
@@ -42,7 +57,17 @@ function Shell() {
           <ConnectionBar />
         </div>
 
-        {onSetup ? <Setup /> : <Dashboard />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={key}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+          >
+            {onSetup ? <Setup /> : onHistory ? <History /> : <Dashboard />}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -52,12 +77,19 @@ function NavLink({ href, active, children }: { href: string; active: boolean; ch
   return (
     <a
       href={href}
-      className={
-        "rounded-md px-3 py-1.5 transition-colors " +
-        (active ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-100")
-      }
+      className={cn(
+        "relative rounded-md px-3 py-1.5 transition-colors",
+        active ? "text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
+      )}
     >
-      {children}
+      {active && (
+        <motion.span
+          layoutId="nav-active"
+          className="absolute inset-0 -z-0 rounded-md bg-zinc-800"
+          transition={{ type: "spring", stiffness: 500, damping: 40 }}
+        />
+      )}
+      <span className="relative z-10">{children}</span>
     </a>
   );
 }

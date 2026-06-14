@@ -1,49 +1,39 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { Toaster, toast } from "sonner";
 import type { NotificationLevel } from "cware-hil-lib";
 import { useHub } from "../hooks/useHub";
 
-const LEVEL_STYLES: Record<NotificationLevel, string> = {
-  info: "border-zinc-700 bg-zinc-900 text-zinc-200",
-  warn: "border-amber-600/60 bg-amber-950/40 text-amber-200",
-  error: "border-red-600/60 bg-red-950/40 text-red-200",
-};
-
-export function Toasts() {
-  const { notifications, dismissNotification } = useHub();
-  // Show the most recent few.
-  const shown = notifications.slice(-4);
-
-  return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-80 max-w-[90vw] flex-col gap-2">
-      {shown.map((n) => (
-        <Toast key={n.id} id={n.id} level={n.level} message={n.message} onDismiss={dismissNotification} />
-      ))}
-    </div>
-  );
+/**
+ * Bridges hub notifications onto sonner. We keep `useHub`'s notification contract
+ * untouched and just mirror each *new* live notification into a sonner toast
+ * (tracked by id so we never double-fire across re-renders). Sonner owns the
+ * stacking / auto-dismiss / exit animation.
+ */
+function emit(level: NotificationLevel, message: string) {
+  if (level === "error") toast.error(message);
+  else if (level === "warn") toast.warning(message);
+  else toast.info(message);
 }
 
-function Toast({
-  id,
-  level,
-  message,
-  onDismiss,
-}: {
-  id: string;
-  level: NotificationLevel;
-  message: string;
-  onDismiss: (id: string) => void;
-}) {
+export function Toasts() {
+  const { notifications } = useHub();
+  const seen = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    const t = setTimeout(() => onDismiss(id), 6000);
-    return () => clearTimeout(t);
-  }, [id, onDismiss]);
+    for (const n of notifications) {
+      if (seen.current.has(n.id)) continue;
+      seen.current.add(n.id);
+      emit(n.level, n.message);
+    }
+  }, [notifications]);
 
   return (
-    <div
-      className={"pointer-events-auto cursor-pointer rounded-lg border px-3 py-2 text-sm shadow-lg " + LEVEL_STYLES[level]}
-      onClick={() => onDismiss(id)}
-    >
-      {message}
-    </div>
+    <Toaster
+      theme="dark"
+      richColors
+      closeButton
+      position="bottom-right"
+      toastOptions={{ duration: 6000 }}
+    />
   );
 }
