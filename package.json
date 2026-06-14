@@ -12,8 +12,10 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@number-flow/react": "^0.6.0",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "cware-hil-lib": "git+https://github.com/KilianSen/cware-hil-lib.git",
     "lucide-react": "^1.18.0",
     "motion": "^12.40.0",

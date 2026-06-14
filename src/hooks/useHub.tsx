@@ -31,6 +31,10 @@ export interface HubState {
   submitAnswer: (answer: Answer) => void;
   cancelQuestion: (questionId: string) => void;
   dismissNotification: (id: string) => void;
+  /** Clear the persistent notification history mirror (and any live toasts queue). */
+  clearNotifications: () => void;
+  /** Remove a single notification from the history mirror. */
+  removeNotification: (id: string) => void;
   sendToAgent: (agentId: string, text: string) => void;
   removeAgent: (agentId: string) => void;
   requestHistory: (filter: HistoryFilter) => Promise<HistoryResult>;
@@ -109,6 +113,17 @@ function useHubClient(config: HubConnectionConfig): HubState {
     submitAnswer: (a) => client.submitAnswer(a),
     cancelQuestion: (id) => client.cancelQuestion(id),
     dismissNotification: (id) => setNotifications((prev) => prev.filter((n) => n.id !== id)),
+    clearNotifications: () => {
+      client.notifications.length = 0;
+      setNotifications([]);
+      bump();
+    },
+    removeNotification: (id) => {
+      const i = client.notifications.findIndex((n) => n.id === id);
+      if (i >= 0) client.notifications.splice(i, 1);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      bump();
+    },
     sendToAgent: (agentId, text) => client.sendToAgent(agentId, text),
     removeAgent: (agentId) => client.removeAgent(agentId),
     requestHistory: (filter) => client.requestHistory(filter),

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Question, QuestionStatus } from "cware-hil-lib";
 import { AnimatePresence, motion } from "motion/react";
-import { KeyRound, PlugZap, Search, SearchX, TriangleAlert } from "lucide-react";
+import { ArrowUp, KeyRound, PlugZap, Search, SearchX, TriangleAlert } from "lucide-react";
 import { useHub } from "../hooks/useHub";
 import { HistoryCard } from "../components/HistoryCard";
+import { EmptyState } from "../components/EmptyState";
 import { cn } from "../lib/cn";
 
 const STATUS_OPTIONS: QuestionStatus[] = ["answered", "cancelled", "expired", "pending"];
@@ -17,6 +18,7 @@ export function History() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTop, setShowTop] = useState(false);
 
   const load = useCallback(
     async (before?: string) => {
@@ -46,6 +48,12 @@ export function History() {
     else setRows([]);
   }, [connected, load]);
 
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 600);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const toggleStatus = (s: QuestionStatus) =>
     setStatuses((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
@@ -60,48 +68,51 @@ export function History() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b border-edge bg-canvas/80 px-4 py-2 backdrop-blur">
         {STATUS_OPTIONS.map((s) => (
           <motion.button
             key={s}
             type="button"
             whileTap={{ scale: 0.95 }}
             onClick={() => toggleStatus(s)}
+            aria-pressed={statuses.includes(s)}
             className={cn(
-              "rounded-full border px-3 py-1 text-xs capitalize transition-colors",
+              "rounded-full border px-3 py-1 font-mono text-[11px] uppercase tracking-wide transition-colors",
               statuses.includes(s)
-                ? "border-violet-500 bg-violet-500/15 text-zinc-100"
-                : "border-zinc-700 text-zinc-400 hover:text-zinc-200",
+                ? "border-accent bg-accent/15 text-ink"
+                : "border-edge text-ink-dim hover:text-ink",
             )}
           >
             {s}
           </motion.button>
         ))}
+        <span className="font-mono text-[11px] text-ink-faint">
+          {visible.length} loaded{hasMore ? "+" : ""}
+        </span>
         <div className="relative ml-auto w-48">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-faint" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search…"
-            className="w-full rounded-md border border-zinc-700 bg-zinc-950 py-1.5 pl-8 pr-2.5 text-sm text-zinc-100 outline-none transition-colors focus:border-violet-500"
+            aria-label="Search history"
+            className="w-full rounded-md border border-edge bg-well py-1.5 pl-8 pr-2.5 text-sm text-ink outline-none transition-colors focus:border-accent"
           />
         </div>
       </div>
 
       {!enabled ? (
-        <Empty Icon={KeyRound}>
-          No hub token set.{" "}
-          <a href="#/setup" className="text-violet-400 hover:underline">Open Setup</a> to connect.
-        </Empty>
+        <EmptyState Icon={KeyRound} action={<SetupLink>Open Setup</SetupLink>}>
+          No hub token set.
+        </EmptyState>
       ) : !connected ? (
-        <Empty Icon={PlugZap}>
-          Not connected to the hub.{" "}
-          <a href="#/setup" className="text-violet-400 hover:underline">Check Setup</a>.
-        </Empty>
+        <EmptyState Icon={PlugZap} action={<SetupLink>Check Setup</SetupLink>}>
+          Not connected to the hub.
+        </EmptyState>
       ) : error ? (
-        <Empty Icon={TriangleAlert}>Couldn’t load history: {error}</Empty>
+        <EmptyState Icon={TriangleAlert}>Couldn’t load history: {error}</EmptyState>
       ) : visible.length === 0 ? (
-        <Empty Icon={SearchX}>{loading ? "Loading…" : "No matching history."}</Empty>
+        <EmptyState Icon={SearchX}>{loading ? "Loading…" : "No matching history."}</EmptyState>
       ) : (
         <motion.div layout className="space-y-3">
           <AnimatePresence initial={false} mode="popLayout">
@@ -116,27 +127,41 @@ export function History() {
                 disabled={loading}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => load(rows[rows.length - 1]?.createdAt)}
-                className="rounded-md border border-zinc-700 px-4 py-1.5 text-sm text-zinc-300 transition-colors hover:text-zinc-100 disabled:opacity-40"
+                className="rounded-md border border-edge px-4 py-1.5 text-sm text-ink-dim transition-colors hover:border-edge-strong hover:text-ink disabled:opacity-40"
               >
-                {loading ? "Loading…" : "Load more"}
+                {loading ? "Loading…" : `Load ${PAGE} more`}
               </motion.button>
             </div>
           )}
         </motion.div>
       )}
+
+      <AnimatePresence>
+        {showTop && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            aria-label="Scroll to top"
+            className="fixed bottom-5 right-5 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-edge-strong bg-panel text-ink-dim shadow-lg shadow-black/30 transition-colors hover:text-ink"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function Empty({ Icon, children }: { Icon: typeof SearchX; children: React.ReactNode }) {
+function SetupLink({ children }: { children: React.ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500"
+    <a
+      href="#/setup"
+      className="rounded-md border border-accent bg-accent/15 px-3 py-1.5 text-sm text-ink transition-colors hover:bg-accent/25"
     >
-      <Icon className="h-5 w-5 text-zinc-600" />
       {children}
-    </motion.div>
+    </a>
   );
 }

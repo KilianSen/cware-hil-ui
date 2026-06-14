@@ -24,14 +24,14 @@ export function Tabs({ tabs }: { tabs: TabDef[] }) {
               type="button"
               onClick={() => setActive(t.id)}
               className={cn(
-                "relative rounded-md border border-zinc-800 px-2.5 py-1.5 text-[13px] transition-colors",
-                isActive ? "text-zinc-100" : "text-zinc-400 hover:text-zinc-100",
+                "relative rounded-md border border-edge px-2.5 py-1.5 text-[13px] transition-colors",
+                isActive ? "text-ink" : "text-ink-dim hover:text-ink",
               )}
             >
               {isActive && (
                 <motion.span
                   layoutId="tab-active"
-                  className="absolute inset-0 -z-0 rounded-md bg-violet-500/15 ring-1 ring-violet-500/40"
+                  className="absolute inset-0 -z-0 rounded-md bg-accent/15 ring-1 ring-accent/40"
                   transition={{ type: "spring", stiffness: 500, damping: 40 }}
                 />
               )}

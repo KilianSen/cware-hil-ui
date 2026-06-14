@@ -1,17 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Question, QuestionKind } from "cware-hil-lib";
 import { AnimatePresence, motion } from "motion/react";
 import NumberFlow from "@number-flow/react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { Inbox, KeyRound, PlugZap, SearchX, Users } from "lucide-react";
 import { useHub } from "../hooks/useHub";
 import { QuestionCard } from "../components/QuestionCard";
 import { AgentRow } from "../components/AgentRow";
 import { NotificationsPanel } from "../components/NotificationsPanel";
+import { EmptyState } from "../components/EmptyState";
+import { onUi } from "../lib/bus";
 import { cn } from "../lib/cn";
 
 const KIND_FILTERS: { key: QuestionKind; label: string }[] = [
-  { key: "ask_user", label: "ask user" },
-  { key: "ask_choice", label: "ask choice" },
+  { key: "ask_user", label: "ask_user" },
+  { key: "ask_choice", label: "ask_choice" },
   { key: "request_approval", label: "approval" },
 ];
 
@@ -24,6 +27,8 @@ export function Dashboard() {
   const [kinds, setKinds] = useState<QuestionKind[]>([]);
   const [sort, setSort] = useState<Sort>("newest");
   const [search, setSearch] = useState("");
+  const [cursor, setCursor] = useState(0);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const agentLabel = (agentId: string) => agents.find((a) => a.agentId === agentId)?.label;
 
@@ -48,15 +53,66 @@ export function Dashboard() {
     return sorted;
   }, [questions, kinds, sort, search]);
 
+  const filtersActive = kinds.length > 0 || search.trim().length > 0;
   const toggleKind = (k: QuestionKind) =>
     setKinds((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
+  const clearFilters = () => {
+    setKinds([]);
+    setSearch("");
+  };
+
+  // Keep the triage cursor in range as the list changes.
+  useEffect(() => {
+    setCursor((c) => Math.min(c, Math.max(0, visible.length - 1)));
+  }, [visible.length]);
+
+  // Scroll the selected card into view as the cursor moves.
+  useEffect(() => {
+    const el = document.querySelector('[data-question-card][data-selected="true"]');
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [cursor]);
+
+  // Latest list length, read from keyboard handlers without re-binding them.
+  const lenRef = useRef(0);
+  lenRef.current = visible.length;
+  const moveNext = () => setCursor((c) => Math.min(c + 1, Math.max(0, lenRef.current - 1)));
+  const movePrev = () => setCursor((c) => Math.max(c - 1, 0));
+
+  const openSelected = () => {
+    const el = document.querySelector('[data-question-card][data-selected="true"]');
+    const field = el?.querySelector<HTMLElement>("textarea, input, [tabindex]");
+    field?.focus();
+  };
+
+  // j/k to move the cursor, Enter to focus the selected card (disabled in fields).
+  useHotkeys("j", moveNext);
+  useHotkeys("k", movePrev);
+  useHotkeys("enter", openSelected);
+  useHotkeys("/", (e) => {
+    e.preventDefault();
+    searchRef.current?.focus();
+  });
+
+  // Commands relayed from the palette.
+  useEffect(
+    () =>
+      onUi((ev) => {
+        if (ev.type === "focus-search") searchRef.current?.focus();
+        else if (ev.type === "question-next") moveNext();
+        else if (ev.type === "question-prev") movePrev();
+        else if (ev.type === "question-open") openSelected();
+      }),
+    [],
+  );
+
+  const selectedId = visible[cursor]?.id;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
       <section>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Pending questions (<NumberFlow value={visible.length} />)
+          <h2 className="font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
+            Pending (<NumberFlow value={visible.length} />)
           </h2>
           <div className="ml-auto flex flex-wrap items-center gap-1.5">
             {KIND_FILTERS.map((f) => (
@@ -65,11 +121,12 @@ export function Dashboard() {
                 type="button"
                 whileTap={{ scale: 0.95 }}
                 onClick={() => toggleKind(f.key)}
+                aria-pressed={kinds.includes(f.key)}
                 className={cn(
-                  "rounded-full border px-2.5 py-0.5 text-[11px] transition-colors",
+                  "rounded-full border px-2.5 py-0.5 font-mono text-[11px] transition-colors",
                   kinds.includes(f.key)
-                    ? "border-violet-500 bg-violet-500/15 text-zinc-100"
-                    : "border-zinc-700 text-zinc-400 hover:text-zinc-200",
+                    ? "border-accent bg-accent/15 text-ink"
+                    : "border-edge text-ink-dim hover:text-ink",
                 )}
               >
                 {f.label}
@@ -78,43 +135,61 @@ export function Dashboard() {
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as Sort)}
-              className="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-[11px] text-zinc-300 outline-none focus:border-violet-500"
+              aria-label="Sort questions"
+              className="rounded-md border border-edge bg-well px-2 py-1 text-[11px] text-ink-dim outline-none focus:border-accent"
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
               <option value="priority">Priority</option>
             </select>
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="rounded-md px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-ink-faint hover:text-ink"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
 
         {enabled && connected && questions.length > 0 && (
           <input
+            ref={searchRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search pending…"
-            className="mb-3 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none transition-colors focus:border-violet-500"
+            placeholder="Search pending…  ( / )"
+            aria-label="Search pending questions"
+            className="mb-3 w-full rounded-md border border-edge bg-well px-2.5 py-1.5 text-sm text-ink outline-none transition-colors focus:border-accent"
           />
         )}
 
         {!enabled ? (
-          <Empty Icon={KeyRound}>
-            No hub token set.{" "}
-            <a href="#/setup" className="text-violet-400 hover:underline">Open Setup</a> to connect.
-          </Empty>
+          <EmptyState
+            Icon={KeyRound}
+            action={<SetupLink>Open Setup</SetupLink>}
+          >
+            No hub token set. Connect to a hub to start receiving questions.
+          </EmptyState>
         ) : !connected ? (
-          <Empty Icon={PlugZap}>
-            Not connected to the hub.{" "}
-            <a href="#/setup" className="text-violet-400 hover:underline">Check Setup</a>.
-          </Empty>
+          <EmptyState Icon={PlugZap} action={<SetupLink>Check Setup</SetupLink>}>
+            Not connected to the hub.
+          </EmptyState>
         ) : questions.length === 0 ? (
-          <Empty Icon={Inbox}>Nothing waiting on you.</Empty>
+          <EmptyState Icon={Inbox}>Nothing waiting on you. All clear.</EmptyState>
         ) : visible.length === 0 ? (
-          <Empty Icon={SearchX}>No questions match the current filters.</Empty>
+          <EmptyState Icon={SearchX}>No questions match the current filters.</EmptyState>
         ) : (
           <motion.div layout className="space-y-3">
             <AnimatePresence initial={false} mode="popLayout">
               {visible.map((q) => (
-                <QuestionCard key={q.id} question={q} agentLabel={agentLabel(q.agentId)} />
+                <QuestionCard
+                  key={q.id}
+                  question={q}
+                  agentLabel={agentLabel(q.agentId)}
+                  selected={q.id === selectedId}
+                />
               ))}
             </AnimatePresence>
           </motion.div>
@@ -123,11 +198,11 @@ export function Dashboard() {
 
       <div className="space-y-8">
         <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          <h2 className="mb-3 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
             Agents (<NumberFlow value={agents.length} />)
           </h2>
           {agents.length === 0 ? (
-            <Empty Icon={Users}>No agents yet.</Empty>
+            <EmptyState Icon={Users}>No agents connected yet.</EmptyState>
           ) : (
             <motion.div layout className="space-y-2">
               <AnimatePresence initial={false} mode="popLayout">
@@ -144,15 +219,13 @@ export function Dashboard() {
   );
 }
 
-function Empty({ Icon, children }: { Icon: typeof Inbox; children: React.ReactNode }) {
+function SetupLink({ children }: { children: React.ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500"
+    <a
+      href="#/setup"
+      className="rounded-md border border-accent bg-accent/15 px-3 py-1.5 text-sm text-ink transition-colors hover:bg-accent/25"
     >
-      <Icon className="h-5 w-5 text-zinc-600" />
       {children}
-    </motion.div>
+    </a>
   );
 }

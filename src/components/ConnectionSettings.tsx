@@ -32,7 +32,7 @@ export function ConnectionSettings() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 backdrop-blur">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-edge bg-panel/80 p-3 backdrop-blur">
         <Field label="Host" className="w-36">
           <input value={host} onChange={(e) => setHost(e.target.value)} spellCheck={false} className={inputCls} />
         </Field>
@@ -60,7 +60,7 @@ export function ConnectionSettings() {
           onClick={apply}
           disabled={!dirty}
           whileTap={dirty ? { scale: 0.96 } : undefined}
-          className="rounded-md border border-violet-500 bg-violet-500/15 px-3 py-1.5 text-sm text-zinc-100 transition-colors hover:bg-violet-500/25 disabled:cursor-default disabled:opacity-40"
+          className="rounded-md border border-accent bg-accent/15 px-3 py-1.5 text-sm text-ink transition-colors hover:bg-accent/25 disabled:cursor-default disabled:opacity-40"
         >
           {dirty ? "Connect" : "Connected"}
         </motion.button>
@@ -88,13 +88,13 @@ function AlertSettings() {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-4 px-1 text-[13px] text-zinc-400">
+    <div className="flex flex-wrap items-center gap-4 px-1 text-[13px] text-ink-dim">
       <label className="flex cursor-pointer items-center gap-2">
         <input
           type="checkbox"
           checked={settings.soundOnQuestion}
           onChange={(e) => update({ soundOnQuestion: e.target.checked })}
-          className="accent-violet-500"
+          className="accent-accent"
         />
         Sound on new question
       </label>
@@ -103,17 +103,17 @@ function AlertSettings() {
           type="checkbox"
           checked={settings.osNotifications && perm === "granted"}
           onChange={enableOs}
-          className="accent-violet-500"
+          className="accent-accent"
         />
         Desktop notifications
       </label>
-      {perm === "denied" && <span className="text-xs text-zinc-600">(blocked by the browser)</span>}
+      {perm === "denied" && <span className="text-xs text-ink-faint">(blocked by the browser)</span>}
     </div>
   );
 }
 
 const inputCls =
-  "w-full rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 font-mono text-[13px] text-zinc-100 outline-none transition-colors focus:border-violet-500";
+  "w-full rounded-md border border-edge bg-well px-2.5 py-1.5 font-mono text-[13px] text-ink outline-none transition-colors focus:border-accent";
 
 function Field({
   label,
@@ -126,7 +126,7 @@ function Field({
 }) {
   return (
     <label className={cn("block", className)}>
-      <span className="mb-1 block text-xs text-zinc-400">{label}</span>
+      <span className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-ink-faint">{label}</span>
       {children}
     </label>
   );

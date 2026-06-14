@@ -32,8 +32,8 @@ export function Setup() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">Hub connection</h2>
-        <p className="mb-3 text-sm text-zinc-400">
+        <h2 className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Hub connection</h2>
+        <p className="mb-3 text-sm text-ink-dim">
           Where this dashboard reaches the hub. In a bundled deployment the host and token are
           filled in for you — leave them as-is. Point at a different hub by editing the fields below.
         </p>
@@ -41,9 +41,9 @@ export function Setup() {
       </section>
 
       <section>
-        <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">Connect an agent</h2>
-        <p className="mb-3 text-sm text-zinc-400">
-          The hub speaks MCP over Streamable HTTP at <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-[12.5px]">{mcpUrl}</code>.
+        <h2 className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Connect an agent</h2>
+        <p className="mb-3 text-sm text-ink-dim">
+          The hub speaks MCP over Streamable HTTP at <code className="rounded bg-well px-1.5 py-0.5 text-[12.5px]">{mcpUrl}</code>.
           Point any MCP client at it with the bearer token — Claude Code is just one option.
         </p>
         <Tabs
@@ -53,7 +53,7 @@ export function Setup() {
               label: "Claude Code",
               render: () => (
                 <div className="space-y-2">
-                  <p className="text-sm text-zinc-400">Run in your project — writes a project-scoped <code className="rounded bg-zinc-800 px-1 text-xs">.mcp.json</code>:</p>
+                  <p className="text-sm text-ink-dim">Run in your project — writes a project-scoped <code className="rounded bg-well px-1 text-xs">.mcp.json</code>:</p>
                   <CodeBlock code={claudeCmd} />
                 </div>
               ),
@@ -63,10 +63,10 @@ export function Setup() {
               label: "MCP config (Cursor, Windsurf, …)",
               render: () => (
                 <div className="space-y-2">
-                  <p className="text-sm text-zinc-400">
-                    The standard <code className="rounded bg-zinc-800 px-1 text-xs">mcpServers</code> shape — for{" "}
-                    <code className="rounded bg-zinc-800 px-1 text-xs">.mcp.json</code>,{" "}
-                    <code className="rounded bg-zinc-800 px-1 text-xs">.cursor/mcp.json</code>, Windsurf, etc.:
+                  <p className="text-sm text-ink-dim">
+                    The standard <code className="rounded bg-well px-1 text-xs">mcpServers</code> shape — for{" "}
+                    <code className="rounded bg-well px-1 text-xs">.mcp.json</code>,{" "}
+                    <code className="rounded bg-well px-1 text-xs">.cursor/mcp.json</code>, Windsurf, etc.:
                   </p>
                   <CodeBlock code={mcpJson} />
                 </div>
@@ -90,9 +90,9 @@ export function Setup() {
       </section>
 
       <section>
-        <h2 className="mb-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">Connect a human UI</h2>
-        <p className="mb-3 text-sm text-zinc-400">
-          Humans answer over the bridge WebSocket at <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-[12.5px]">{bridgeUrl}</code>.
+        <h2 className="mb-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-faint">Connect a human UI</h2>
+        <p className="mb-3 text-sm text-ink-dim">
+          Humans answer over the bridge WebSocket at <code className="rounded bg-well px-1.5 py-0.5 text-[12.5px]">{bridgeUrl}</code>.
           This web dashboard is one client; the Obsidian plugin is another.
         </p>
         <Tabs
@@ -101,9 +101,9 @@ export function Setup() {
               id: "web",
               label: "This dashboard",
               render: () => (
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-ink-dim">
                   Already set up — enter the host, port, and token in the bar above and open the{" "}
-                  <a href="#/" className="text-violet-400 hover:underline">Dashboard</a>.
+                  <a href="#/" className="text-accent hover:underline">Dashboard</a>.
                 </p>
               ),
             },
@@ -125,7 +125,7 @@ export function Setup() {
               label: "Raw bridge",
               render: () => (
                 <div className="space-y-2">
-                  <p className="text-sm text-zinc-400">Connect a WebSocket client (token as a query param), then send a <code className="rounded bg-zinc-800 px-1 text-xs">hello</code> frame:</p>
+                  <p className="text-sm text-ink-dim">Connect a WebSocket client (token as a query param), then send a <code className="rounded bg-well px-1 text-xs">hello</code> frame:</p>
                   <CodeBlock code={`${bridgeUrl}?token=${encodeURIComponent(token)}`} />
                 </div>
               ),
@@ -139,11 +139,11 @@ export function Setup() {
 
 function KV({ rows }: { rows: [string, string][] }) {
   return (
-    <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+    <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1.5 rounded-xl border border-edge bg-panel p-4">
       {rows.map(([k, v]) => (
         <div key={k} className="contents">
-          <span className="text-sm text-zinc-500">{k}</span>
-          <span className="break-all font-mono text-[13px] text-zinc-200">{v}</span>
+          <span className="text-sm text-ink-faint">{k}</span>
+          <span className="break-all font-mono text-[13px] text-ink">{v}</span>
         </div>
       ))}
     </div>

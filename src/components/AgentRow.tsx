@@ -1,25 +1,27 @@
 import { useState } from "react";
 import type { Agent } from "cware-hil-lib";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import NumberFlow from "@number-flow/react";
-import { CheckCircle2, Circle, Clock, Loader2, MessageSquarePlus, Send, Trash2, XCircle } from "lucide-react";
+import { MessageSquarePlus, Send, Trash2 } from "lucide-react";
 import { relativeTime } from "../lib/format";
 import { useHub } from "../hooks/useHub";
+import { useNow } from "../hooks/useNow";
+import { StatusLed, type LedTone } from "./StatusLed";
 import { cn } from "../lib/cn";
 
-const STATUS: Record<Agent["status"], { badge: string; Icon: typeof Circle; spin?: boolean }> = {
-  idle: { badge: "bg-zinc-700 text-zinc-200", Icon: Circle },
-  working: { badge: "bg-sky-500/20 text-sky-300", Icon: Loader2, spin: true },
-  waiting: { badge: "bg-amber-500/20 text-amber-300", Icon: Clock },
-  done: { badge: "bg-emerald-500/20 text-emerald-300", Icon: CheckCircle2 },
-  error: { badge: "bg-red-500/20 text-red-300", Icon: XCircle },
+const STATUS: Record<Agent["status"], { tone: LedTone; pulse?: boolean; tw: string }> = {
+  idle: { tone: "idle", tw: "text-ink-faint" },
+  working: { tone: "info", pulse: true, tw: "text-info" },
+  waiting: { tone: "warn", pulse: true, tw: "text-warn" },
+  done: { tone: "ok", tw: "text-ok" },
+  error: { tone: "danger", tw: "text-danger" },
 };
 
 export function AgentRow({ agent }: { agent: Agent }) {
   const { sendToAgent, removeAgent } = useHub();
   const [composing, setComposing] = useState(false);
   const [text, setText] = useState("");
-  const reduce = useReducedMotion();
+  useNow(); // keep "last seen" fresh
 
   const send = () => {
     const t = text.trim();
@@ -40,28 +42,28 @@ export function AgentRow({ agent }: { agent: Agent }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-      className="rounded-lg border border-zinc-800 bg-zinc-900 p-3"
+      className="rounded-lg border border-edge bg-panel p-3"
     >
       <div className="flex items-center gap-2">
-        <span className="font-medium text-zinc-100">{agent.label ?? agent.agentId.slice(0, 8)}</span>
-        <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium", s.badge)}>
-          <s.Icon className={cn("h-3 w-3", s.spin && !reduce && "animate-spin")} />
-          {agent.status}
+        <StatusLed tone={s.tone} pulse={s.pulse} />
+        <span className="truncate font-medium text-ink">
+          {agent.label ?? <span className="font-mono text-ink-dim">{agent.agentId.slice(0, 8)}</span>}
         </span>
-        <span className="ml-auto text-xs text-zinc-500">{relativeTime(agent.lastSeen)}</span>
+        <span className={cn("font-mono text-[10px] uppercase tracking-wider", s.tw)}>{agent.status}</span>
+        <span className="ml-auto shrink-0 font-mono text-[11px] text-ink-faint">{relativeTime(agent.lastSeen)}</span>
       </div>
-      {agent.currentTask && <div className="mt-1.5 text-sm text-zinc-400">{agent.currentTask}</div>}
+      {agent.currentTask && <div className="mt-1.5 text-sm text-ink-dim">{agent.currentTask}</div>}
       {pct !== null && (
         <div className="mt-2 flex items-center gap-2">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-well">
             <motion.div
-              className="h-full rounded-full bg-violet-500"
+              className="h-full rounded-full bg-accent"
               initial={false}
               animate={{ width: `${pct}%` }}
               transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
             />
           </div>
-          <span className="w-9 text-right text-[11px] tabular-nums text-zinc-400">
+          <span className="w-9 text-right font-mono text-[11px] tabular-nums text-ink-dim">
             <NumberFlow value={pct} suffix="%" />
           </span>
         </div>
@@ -87,17 +89,17 @@ export function AgentRow({ agent }: { agent: Agent }) {
                 if (e.key === "Escape") setComposing(false);
               }}
               placeholder="Message to this agent…"
-              className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none transition-colors focus:border-violet-500"
+              className="w-full rounded-md border border-edge bg-well px-2.5 py-1.5 text-sm text-ink outline-none transition-colors focus:border-accent"
             />
             <div className="flex items-center justify-end gap-2 text-xs">
-              <button type="button" onClick={() => setComposing(false)} className="text-zinc-400 hover:text-zinc-200">
+              <button type="button" onClick={() => setComposing(false)} className="text-ink-dim hover:text-ink">
                 Cancel
               </button>
               <motion.button
                 type="button"
                 onClick={send}
                 whileTap={{ scale: 0.96 }}
-                className="inline-flex items-center gap-1 rounded border border-violet-500 bg-violet-500/15 px-2.5 py-1 text-zinc-100 hover:bg-violet-500/25"
+                className="inline-flex items-center gap-1 rounded border border-accent bg-accent/15 px-2.5 py-1 text-ink hover:bg-accent/25"
               >
                 <Send className="h-3 w-3" /> Send
               </motion.button>
@@ -110,12 +112,21 @@ export function AgentRow({ agent }: { agent: Agent }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
-            className="mt-2 flex gap-3 text-xs text-zinc-500"
+            className="mt-2 flex gap-3 text-xs text-ink-faint"
           >
-            <button type="button" onClick={() => setComposing(true)} className="inline-flex items-center gap-1 hover:text-zinc-200">
+            <button
+              type="button"
+              onClick={() => setComposing(true)}
+              className="inline-flex items-center gap-1 hover:text-ink"
+            >
               <MessageSquarePlus className="h-3.5 w-3.5" /> Message
             </button>
-            <button type="button" onClick={() => removeAgent(agent.agentId)} className="inline-flex items-center gap-1 hover:text-red-300">
+            <button
+              type="button"
+              onClick={() => removeAgent(agent.agentId)}
+              aria-label={`Remove agent ${agent.label ?? agent.agentId.slice(0, 8)}`}
+              className="inline-flex items-center gap-1 hover:text-danger"
+            >
               <Trash2 className="h-3.5 w-3.5" /> Remove
             </button>
           </motion.div>

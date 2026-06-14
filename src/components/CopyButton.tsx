@@ -21,11 +21,12 @@ export function CopyButton({ text, className = "" }: { text: string; className?:
       type="button"
       onClick={onClick}
       whileTap={{ scale: 0.94 }}
+      aria-label={copied ? "Copied" : "Copy to clipboard"}
       className={cn(
         "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors",
         copied
-          ? "border-emerald-500 text-emerald-400"
-          : "border-zinc-700 text-zinc-300 hover:border-violet-500",
+          ? "border-ok text-ok"
+          : "border-edge text-ink-dim hover:border-accent",
         className,
       )}
     >

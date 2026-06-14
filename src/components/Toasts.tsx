@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { Toaster, toast } from "sonner";
 import type { NotificationLevel } from "cware-hil-lib";
 import { useHub } from "../hooks/useHub";
+import { useSettings } from "../hooks/useSettings";
+import { resolveTheme } from "../lib/theme";
 
 /**
  * Bridges hub notifications onto sonner. We keep `useHub`'s notification contract
@@ -17,6 +19,7 @@ function emit(level: NotificationLevel, message: string) {
 
 export function Toasts() {
   const { notifications } = useHub();
+  const { settings } = useSettings();
   const seen = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -29,7 +32,7 @@ export function Toasts() {
 
   return (
     <Toaster
-      theme="dark"
+      theme={resolveTheme(settings.theme)}
       richColors
       closeButton
       position="bottom-right"

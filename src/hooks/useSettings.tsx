@@ -3,16 +3,21 @@ import type { ReactNode } from "react";
 
 const STORAGE_KEY = "cware-hil-ui:settings";
 
+export type ThemePref = "system" | "dark" | "light";
+
 export interface UiSettings {
   /** Play a sound when a new question arrives. */
   soundOnQuestion: boolean;
   /** Fire an OS notification on new questions / agent notifications. */
   osNotifications: boolean;
+  /** Color theme — "system" follows the OS preference. */
+  theme: ThemePref;
 }
 
 const DEFAULT_SETTINGS: UiSettings = {
   soundOnQuestion: false,
   osNotifications: false,
+  theme: "system",
 };
 
 function load(): UiSettings {

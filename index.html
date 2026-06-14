@@ -3,10 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HITL hub</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="theme-color" content="#07070a" />
+    <title>cware · hitl — human-in-the-loop</title>
     <!-- Runtime config (token auto-populate). Plain script so it runs before the
          deferred module bundle; overwritten at container start from CC_HITL_TOKEN. -->
     <script src="/runtime-config.js"></script>
+    <!-- Set the theme before first paint to avoid a flash. Mirrors the `theme`
+         field persisted by useSettings (cware-hil-ui:settings). -->
+    <script>
+      (function () {
+        try {
+          var s = JSON.parse(localStorage.getItem("cware-hil-ui:settings") || "{}");
+          var t = s.theme || "system";
+          var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+        } catch (e) {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
