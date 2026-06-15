@@ -103,11 +103,14 @@ By default the hub is single-user (the token/QR/OTP flow above). For a team, ena
 **multi-user mode** so humans sign in with an **OpenID Connect** provider instead of
 sharing a token:
 
-- **Login** uses Authorization Code + PKCE in the browser (public client, no secret); the
-  hub verifies the ID token statelessly against the issuer's JWKS. Answers are attributed
-  to the signed-in user. Sessions **auto-renew** via a refresh token (the app requests the
-  `offline_access` scope), so the issuer's public client must be allowed to issue refresh
-  tokens; if it can't, the session simply drops to the sign-in screen on expiry.
+This uses a **backend (BFF) flow**: the **hub** is a confidential OIDC client. It does the
+Authorization Code exchange (with the client secret), holds the tokens server-side, and
+hands the browser only an **httpOnly session cookie** — no tokens ever live in JS.
+
+- **Login** is a full-page redirect to the hub's `/auth/login`; the hub round-trips the
+  issuer and sets the session cookie, then `/auth/me` tells the SPA who's signed in.
+  Answers are attributed to the signed-in user. The session lives in the hub's SQLite and
+  slides on activity, so renewal is server-side (no client token refresh).
 - **Access:** any authenticated user from the configured issuer can use the dashboard —
   so point it at a **private/dedicated** issuer. A configurable **group claim** grants
   **admin**; the master token is an admin break-glass.
@@ -116,21 +119,26 @@ sharing a token:
   message agents.
 - **Agents** still authenticate to `/mcp` with bearer tokens (mint per-agent tokens from
   **Setup → Connect an agent**, admin only).
+- **Same-origin only:** the session cookie requires the dashboard and hub on one origin —
+  use the single-port **full-stack image** (its nginx proxies `/auth`, `/config`, `/pair`).
+  Split-origin deployments stay on single-user token/QR/OTP.
 
-Configure it two ways:
+Register the dashboard's **`<origin>/auth/callback`** as a redirect URI in your provider,
+and create a **confidential** client (with a secret). Configure two ways:
 
 ```bash
 # 1) Environment (pins the config; the UI setup is then disabled)
 CC_HITL_OIDC_ISSUER=https://idp.example.com/realms/main \
 CC_HITL_OIDC_CLIENT_ID=cware-hil-ui \
+CC_HITL_OIDC_CLIENT_SECRET=… \
 CC_HITL_OIDC_ADMIN_GROUP_CLAIM=groups \
 CC_HITL_OIDC_ADMIN_GROUP=hitl-admin \
-  ./cc-hitl start
+  ./cc-hitl start    # optional: CC_HITL_OIDC_REDIRECT_URL to override the callback
 ```
 
 Or **2) one-time in the UI**: as the master-token admin, open **Setup → Multi-user
-(OIDC)**, enter the issuer + client id (+ optional admin group), and save. Register the
-dashboard's URL as a redirect URI in your provider. Reload, and everyone signs in via SSO.
+(OIDC)**, enter issuer + client id + secret (+ optional admin group), and save. Reload,
+and everyone signs in via SSO.
 
 The hub's `GET /config` reports the mode; the SPA shows a sign-in screen or token
 onboarding accordingly.

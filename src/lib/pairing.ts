@@ -114,6 +114,15 @@ export function hubHttpBase(config: { host: string; port: number }): string {
 }
 
 /**
+ * Auth header for admin calls: a bearer token in single-user mode; omitted in
+ * OIDC mode (empty token) where the session cookie authenticates instead. All
+ * admin calls also pass `credentials: "include"` so that cookie is sent.
+ */
+export function bearer(token: string): HeadersInit {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/**
  * Mint a fresh per-device token for QR hand-off, authenticated by the current
  * connection. Keeps the working host/port (this client is already connected with
  * them) and only swaps in the newly issued, individually-revocable token.
@@ -125,7 +134,8 @@ export async function issueDeviceToken(
   const url = `${hubHttpBase(config)}/pair/issue${label ? `?label=${encodeURIComponent(label)}` : ""}`;
   const resp = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${config.token}` },
+    credentials: "include",
+    headers: bearer(config.token),
   });
   if (!resp.ok) throw new Error(`Could not issue a device token (${resp.status}).`);
   const data = (await resp.json()) as PairIssueResponse;
@@ -135,7 +145,8 @@ export async function issueDeviceToken(
 /** Fetch the hub's current rotating pairing code (authenticated). */
 export async function fetchPairCode(config: HubConnectionConfig): Promise<PairCodeResponse> {
   const resp = await fetch(`${hubHttpBase(config)}/pair/code`, {
-    headers: { Authorization: `Bearer ${config.token}` },
+    credentials: "include",
+    headers: bearer(config.token),
   });
   if (!resp.ok) throw new Error(`Could not fetch the pairing code (${resp.status}).`);
   return (await resp.json()) as PairCodeResponse;
@@ -144,7 +155,8 @@ export async function fetchPairCode(config: HubConnectionConfig): Promise<PairCo
 /** List paired clients/agents for management (metadata only — no tokens). */
 export async function listDevices(config: HubConnectionConfig): Promise<PairDevice[]> {
   const resp = await fetch(`${hubHttpBase(config)}/pair/devices`, {
-    headers: { Authorization: `Bearer ${config.token}` },
+    credentials: "include",
+    headers: bearer(config.token),
   });
   if (!resp.ok) throw new Error(`Could not list devices (${resp.status}).`);
   return (await resp.json()) as PairDevice[];
@@ -159,7 +171,8 @@ export async function setDeviceDisabled(
   const action = disabled ? "disable" : "enable";
   const resp = await fetch(`${hubHttpBase(config)}/pair/devices/${encodeURIComponent(id)}/${action}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${config.token}` },
+    credentials: "include",
+    headers: bearer(config.token),
   });
   if (!resp.ok) throw new Error(`Could not ${action} device (${resp.status}).`);
 }
@@ -168,7 +181,8 @@ export async function setDeviceDisabled(
 export async function removeDevice(config: HubConnectionConfig, id: string): Promise<void> {
   const resp = await fetch(`${hubHttpBase(config)}/pair/devices/${encodeURIComponent(id)}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${config.token}` },
+    credentials: "include",
+    headers: bearer(config.token),
   });
   if (!resp.ok) throw new Error(`Could not remove device (${resp.status}).`);
 }

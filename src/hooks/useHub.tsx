@@ -53,7 +53,7 @@ function useHubClient(config: HubConnectionConfig): HubState {
   const [connected, setConnected] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { settings } = useSettings();
-  const { mode, user, getIdToken } = useAuth();
+  const { mode, user } = useAuth();
   const oidc = mode === "oidc";
   // Keep the latest settings readable from client callbacks without re-binding them.
   const settingsRef = useRef(settings);
@@ -80,7 +80,7 @@ function useHubClient(config: HubConnectionConfig): HubState {
 
   useEffect(() => {
     const client = clientRef.current!;
-    client.authProvider = oidc ? { oidc: true, getIdToken } : null;
+    client.authProvider = oidc ? { oidc: true } : null;
     if (enabled) {
       client.setConfig(config);
     } else {
@@ -88,7 +88,7 @@ function useHubClient(config: HubConnectionConfig): HubState {
       setConnected(false);
     }
     return () => client.disconnect();
-  }, [config.host, config.port, config.token, enabled, oidc, getIdToken]);
+  }, [config.host, config.port, config.token, enabled, oidc]);
 
   const client = clientRef.current;
 

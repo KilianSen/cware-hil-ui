@@ -196,8 +196,7 @@ function Nav({ active }: { active: string }) {
 function UserMenu() {
   const { mode, user, signOut } = useAuth();
   if (mode !== "oidc" || !user) return null;
-  const profile = user.profile as { email?: string; name?: string; preferred_username?: string };
-  const who = profile.email ?? profile.name ?? profile.preferred_username ?? "signed in";
+  const who = user.email ?? user.name ?? user.subject ?? "signed in";
   return (
     <div className="flex items-center gap-1">
       <span className="text-muted-foreground hidden max-w-[160px] truncate text-xs sm:inline" title={who}>

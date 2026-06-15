@@ -25,12 +25,12 @@ export interface Identity {
 
 /**
  * How a human authenticates to the bridge. In single-user mode the static bearer
- * token is used; in OIDC mode `getIdToken` supplies a fresh ID token per
- * (re)connect, sent in the `hello` frame instead of a `?token=` query param.
+ * token rides as a `?token=` query param. In OIDC (BFF) mode the hub authenticates
+ * the upgrade from the httpOnly session cookie the browser sends same-origin — so
+ * the client sends no token at all.
  */
 export interface AuthProvider {
   oidc: boolean;
-  getIdToken: () => Promise<string | null>;
 }
 
 export interface HistoryResult {
@@ -165,8 +165,9 @@ export class HubClient {
     const authority =
       host === window.location.hostname ? window.location.host : `${host}:${port}`;
     const oidc = this.authProvider?.oidc ?? false;
-    // OIDC: authenticate in the hello frame (no token in the URL). Single-user:
-    // the bearer token rides as a query param (the WS upgrade can't set headers).
+    // OIDC (BFF): the hub authenticates the upgrade from the session cookie the
+    // browser sends same-origin — no token in the URL. Single-user: the bearer
+    // token rides as a query param (the WS upgrade can't set headers).
     const url = oidc
       ? `${scheme}://${authority}/bridge`
       : `${scheme}://${authority}/bridge?token=${encodeURIComponent(token)}`;
@@ -179,21 +180,11 @@ export class HubClient {
     }
     this.ws = ws;
 
-    ws.onopen = async () => {
-      let idToken: string | undefined;
-      if (oidc) {
-        idToken = (await this.authProvider!.getIdToken()) ?? undefined;
-        if (!idToken) {
-          // Signed out / token unrenewable — drop and let reconnect retry.
-          this.ws?.close();
-          return;
-        }
-      }
+    ws.onopen = () => {
       this.sendRaw({
         type: "hello",
         clientId: this.clientId,
         token: oidc ? "" : this.cfg.token,
-        idToken,
         protocolVersion: BRIDGE_PROTOCOL_VERSION,
       });
     };

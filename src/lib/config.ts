@@ -1,4 +1,4 @@
-import { hubHttpBase } from "./pairing";
+import { bearer, hubHttpBase } from "./pairing";
 
 /** Public OIDC config from the hub's `GET /config` (mirrors lib OIDCPublicConfig). */
 export interface OIDCPublicConfig {
@@ -17,14 +17,21 @@ export async function fetchHubConfig(config: { host: string; port: number }): Pr
   return (await resp.json()) as OIDCPublicConfig;
 }
 
-/** Set the hub's OIDC config (admin-gated PUT /config). Disable with enabled:false. */
+/** Set the hub's OIDC config (admin-gated PUT /config). Disable with issuerUrl:"". */
 export async function setHubOIDC(
   config: { host: string; port: number; token: string },
-  body: { issuerUrl: string; clientId: string; adminGroupClaim?: string; adminGroupValue?: string },
+  body: {
+    issuerUrl: string;
+    clientId: string;
+    clientSecret?: string;
+    adminGroupClaim?: string;
+    adminGroupValue?: string;
+  },
 ): Promise<void> {
   const resp = await fetch(`${hubHttpBase(config)}/config`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.token}` },
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...bearer(config.token) },
     body: JSON.stringify(body),
   });
   if (resp.status === 401 || resp.status === 403) throw new Error("Admin access required to change auth settings.");

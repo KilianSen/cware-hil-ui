@@ -134,35 +134,37 @@ export function Setup() {
 
 /**
  * The one-time multi-user setup (admin-gated server-side). Enabling requires the
- * issuer + client id; an optional group claim/value grants admin to matching
- * users. Authenticates the PUT with the OIDC admin's id token, or the bearer
- * token (master/break-glass) in single-user mode.
+ * issuer + client id + secret (the hub is a confidential client); an optional
+ * group claim/value grants admin to matching users. The PUT authenticates with
+ * the master token in single-user mode, or the admin's session cookie in OIDC
+ * mode (sent via credentials:include).
  */
 function MultiUserCard() {
   const { config } = useConnection();
-  const { mode, oidc, getIdToken } = useAuth();
+  const { mode, oidc } = useAuth();
   const enabled = oidc?.enabled ?? false;
   const [issuer, setIssuer] = useState(oidc?.issuer ?? "");
   const [clientId, setClientId] = useState(oidc?.clientId ?? "");
+  const [clientSecret, setClientSecret] = useState("");
   const [groupClaim, setGroupClaim] = useState("groups");
   const [groupValue, setGroupValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const adminBearer = async () =>
-    mode === "oidc" ? ((await getIdToken()) ?? "") : config.token;
+  // Single-user setup is master-token authed; OIDC reconfig uses the cookie.
+  const token = mode === "oidc" ? "" : config.token;
 
   const apply = async (turnOn: boolean) => {
     setBusy(true);
     setMsg(null);
     try {
-      const token = await adminBearer();
       await setHubOIDC(
         { host: config.host, port: config.port, token },
         turnOn
           ? {
               issuerUrl: issuer.trim(),
               clientId: clientId.trim(),
+              clientSecret: clientSecret.trim(),
               adminGroupClaim: groupClaim.trim(),
               adminGroupValue: groupValue.trim(),
             }
@@ -208,7 +210,12 @@ function MultiUserCard() {
           <Input id="oidc-cid" value={clientId} onChange={(e) => setClientId(e.target.value)}
             placeholder="cware-hil-ui" spellCheck={false} className="font-mono text-[13px]" />
         </Field>
-        <div className="grid grid-cols-2 gap-2">
+        <Field label="Client secret" htmlFor="oidc-sec">
+          <Input id="oidc-sec" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)}
+            type="password" placeholder={enabled ? "unchanged" : "client secret"}
+            autoComplete="off" spellCheck={false} className="font-mono text-[13px]" />
+        </Field>
+        <div className="grid grid-cols-2 gap-2 sm:col-span-2">
           <Field label="Admin claim" htmlFor="oidc-gc">
             <Input id="oidc-gc" value={groupClaim} onChange={(e) => setGroupClaim(e.target.value)}
               placeholder="groups" spellCheck={false} className="font-mono text-[13px]" />

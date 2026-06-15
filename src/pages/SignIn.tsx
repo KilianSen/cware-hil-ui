@@ -1,15 +1,16 @@
-import { LogIn, TriangleAlert } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { BrandMark } from "../components/BrandMark";
 import { VersionFooter } from "../components/VersionFooter";
 import { Button } from "@/components/ui/button";
 
 /**
- * Shown in multi-user (OIDC) mode until a user is signed in. Kicks off the
- * Authorization Code + PKCE redirect to the configured issuer.
+ * Shown in multi-user (OIDC) mode until a user is signed in. The button does a
+ * full-page redirect to the hub's /auth/login, which drives the backend OIDC
+ * flow and returns with a session cookie set.
  */
 export function SignIn() {
-  const { signIn, oidc, error } = useAuth();
+  const { signIn, oidc } = useAuth();
   let issuerHost = "";
   try {
     issuerHost = oidc?.issuer ? new URL(oidc.issuer).host : "";
@@ -30,13 +31,7 @@ export function SignIn() {
           </p>
         </div>
 
-        <div className="bg-card space-y-4 rounded-2xl border p-5">
-          {error && (
-            <p className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-500">
-              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-              {error}
-            </p>
-          )}
+        <div className="bg-card rounded-2xl border p-5">
           <Button type="button" onClick={signIn} className="w-full">
             <LogIn className="size-4" /> Sign in
           </Button>
