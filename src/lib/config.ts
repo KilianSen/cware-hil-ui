@@ -26,6 +26,7 @@ export async function setHubOIDC(
     clientSecret?: string;
     adminGroupClaim?: string;
     adminGroupValue?: string;
+    scopes?: string;
   },
 ): Promise<void> {
   const resp = await fetch(`${hubHttpBase(config)}/config`, {

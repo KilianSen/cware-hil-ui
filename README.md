@@ -128,17 +128,25 @@ and create a **confidential** client (with a secret). Configure two ways:
 
 ```bash
 # 1) Environment (pins the config; the UI setup is then disabled)
-CC_HITL_OIDC_ISSUER=https://idp.example.com/realms/main \
+CC_HITL_OIDC_ISSUER=https://idp.example.com \
 CC_HITL_OIDC_CLIENT_ID=cware-hil-ui \
 CC_HITL_OIDC_CLIENT_SECRET=… \
 CC_HITL_OIDC_ADMIN_GROUP_CLAIM=groups \
-CC_HITL_OIDC_ADMIN_GROUP=hitl-admin \
-  ./cc-hitl start    # optional: CC_HITL_OIDC_REDIRECT_URL to override the callback
+CC_HITL_OIDC_ADMIN_GROUP=admin \
+  ./cc-hitl start
+# optional: CC_HITL_OIDC_SCOPES (default "openid profile email groups"),
+#           CC_HITL_OIDC_REDIRECT_URL to override the callback
 ```
 
 Or **2) one-time in the UI**: as the master-token admin, open **Setup → Multi-user
-(OIDC)**, enter issuer + client id + secret (+ optional admin group), and save. Reload,
-and everyone signs in via SSO.
+(OIDC)**, enter issuer + client id + secret (+ optional admin group / scopes), and save.
+Reload, and everyone signs in via SSO.
+
+> **Groups must be in the token.** Many providers (e.g. Pocket ID) only include the
+> `groups` claim when a `groups` **scope** is requested — that's why it's in the default
+> scope list; make sure your client also exposes that scope. Admin is decided **at
+> sign-in**, so after changing the admin group/scopes, **sign out and back in** to pick it
+> up.
 
 The hub's `GET /config` reports the mode; the SPA shows a sign-in screen or token
 onboarding accordingly.

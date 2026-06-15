@@ -148,6 +148,7 @@ function MultiUserCard() {
   const [clientSecret, setClientSecret] = useState("");
   const [groupClaim, setGroupClaim] = useState("groups");
   const [groupValue, setGroupValue] = useState("");
+  const [scopes, setScopes] = useState("openid profile email groups");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -167,6 +168,7 @@ function MultiUserCard() {
               clientSecret: clientSecret.trim(),
               adminGroupClaim: groupClaim.trim(),
               adminGroupValue: groupValue.trim(),
+              scopes: scopes.trim(),
             }
           : { issuerUrl: "", clientId: "" },
       );
@@ -222,9 +224,13 @@ function MultiUserCard() {
           </Field>
           <Field label="Admin value" htmlFor="oidc-gv">
             <Input id="oidc-gv" value={groupValue} onChange={(e) => setGroupValue(e.target.value)}
-              placeholder="hitl-admin" spellCheck={false} className="font-mono text-[13px]" />
+              placeholder="admin" spellCheck={false} className="font-mono text-[13px]" />
           </Field>
         </div>
+        <Field label="Scopes" htmlFor="oidc-scopes" className="sm:col-span-2">
+          <Input id="oidc-scopes" value={scopes} onChange={(e) => setScopes(e.target.value)}
+            placeholder="openid profile email groups" spellCheck={false} className="font-mono text-[13px]" />
+        </Field>
         <div className="flex items-center gap-2 sm:col-span-2">
           <Button type="submit" disabled={busy || !issuer.trim() || !clientId.trim()}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Users className="size-4" />}
