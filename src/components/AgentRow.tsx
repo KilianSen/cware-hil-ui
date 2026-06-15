@@ -2,9 +2,10 @@ import { useState } from "react";
 import type { Agent } from "cware-hil-lib";
 import { AnimatePresence, motion } from "motion/react";
 import NumberFlow from "@number-flow/react";
-import { MessageSquarePlus, Send, Trash2 } from "lucide-react";
+import { Eye, MessageSquarePlus, Send, Trash2 } from "lucide-react";
 import { relativeTime } from "../lib/format";
 import { useHub } from "../hooks/useHub";
+import type { ScopedAgent } from "../lib/hubClient";
 import { useNow } from "../hooks/useNow";
 import { StatusLed, type LedTone } from "./StatusLed";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,7 @@ const STATUS: Record<Agent["status"], { tone: LedTone; pulse?: boolean; tw: stri
   error: { tone: "danger", tw: "text-destructive" },
 };
 
-export function AgentRow({ agent }: { agent: Agent }) {
+export function AgentRow({ agent }: { agent: ScopedAgent }) {
   const { sendToAgent, removeAgent, isAdmin } = useHub();
   const [composing, setComposing] = useState(false);
   const [text, setText] = useState("");
@@ -60,6 +61,7 @@ export function AgentRow({ agent }: { agent: Agent }) {
         </span>
       </div>
       {agent.currentTask && <div className="text-muted-foreground mt-1.5 text-sm">{agent.currentTask}</div>}
+      <AudiencePicker agent={agent} />
       {pct !== null && (
         <div className="mt-2 flex items-center gap-2">
           <Progress value={pct} className="h-1.5 flex-1" />
@@ -133,5 +135,49 @@ export function AgentRow({ agent }: { agent: Agent }) {
         )}
       </AnimatePresence>
     </motion.div>
+  );
+}
+
+const audienceLabel = (a: string) =>
+  a === "private" ? "Only me" : a === "everyone" ? "Everyone" : a.replace(/^group:/, "");
+
+/**
+ * Who can see this agent (multi-user scoping). The owner or an admin can change
+ * it; others see a read-only indicator. Hidden for owner-less / global agents.
+ */
+function AudiencePicker({ agent }: { agent: ScopedAgent }) {
+  const { you, isAdmin, setAgentAudience } = useHub();
+  const owner = agent.owner?.subject;
+  if (!owner) return null; // global / single-user agent — nothing to scope
+
+  const canEdit = isAdmin || (you?.subject != null && you.subject === owner);
+  const value = agent.audience ?? "private";
+  const groups = agent.ownerGroups ?? [];
+
+  if (!canEdit) {
+    return (
+      <p className="text-muted-foreground mt-1.5 flex items-center gap-1.5 text-xs">
+        <Eye className="size-3.5" /> Visible to {audienceLabel(value)}
+      </p>
+    );
+  }
+
+  return (
+    <label className="text-muted-foreground mt-1.5 flex items-center gap-1.5 text-xs">
+      <Eye className="size-3.5" /> Visible to
+      <select
+        value={value}
+        onChange={(e) => setAgentAudience(agent.agentId, e.target.value)}
+        className="bg-muted text-foreground rounded border-0 py-0.5 pl-1.5 pr-6 text-xs"
+      >
+        <option value="private">Only me</option>
+        {groups.map((g) => (
+          <option key={g} value={`group:${g}`}>
+            {g}
+          </option>
+        ))}
+        <option value="everyone">Everyone</option>
+      </select>
+    </label>
   );
 }

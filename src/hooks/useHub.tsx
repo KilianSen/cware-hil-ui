@@ -8,8 +8,14 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import type { Agent, Answer, HistoryFilter, Notification, Question } from "cware-hil-lib";
-import { HubClient, type HubConnectionConfig, type HistoryResult, type Identity } from "../lib/hubClient";
+import type { Answer, HistoryFilter, Notification, Question } from "cware-hil-lib";
+import {
+  HubClient,
+  type HubConnectionConfig,
+  type HistoryResult,
+  type Identity,
+  type ScopedAgent,
+} from "../lib/hubClient";
 import { useConnection } from "./useConnection";
 import { useSettings } from "./useSettings";
 import { useAuth } from "./useAuth";
@@ -24,7 +30,7 @@ export interface HubState {
   /** Whether this principal may perform admin-gated actions (always true in single-user mode). */
   isAdmin: boolean;
   questions: Question[];
-  agents: Agent[];
+  agents: ScopedAgent[];
   /** Ephemeral toast queue (live notifications since page load). */
   notifications: Notification[];
   /** Persistent notification history (seeded from the snapshot). */
@@ -42,6 +48,7 @@ export interface HubState {
   removeNotification: (id: string) => void;
   sendToAgent: (agentId: string, text: string) => void;
   removeAgent: (agentId: string) => void;
+  setAgentAudience: (agentId: string, audience: string) => void;
   requestHistory: (filter: HistoryFilter) => Promise<HistoryResult>;
 }
 
@@ -74,13 +81,17 @@ function useHubClient(config: HubConnectionConfig): HubState {
     clientRef.current = client;
   }
 
-  // In OIDC mode we connect once a user is signed in (auth via the ID token); in
-  // single-user mode, once a token is configured.
-  const enabled = oidc ? !!user : config.token.trim().length > 0;
+  // A configured token always authenticates via the token path — this is how a
+  // device that can't do SSO (kiosk / intranet) connects, even while the hub is
+  // in OIDC mode. Otherwise, in OIDC mode, we use the session cookie once signed
+  // in; in single-user mode there's nothing to connect with until a token is set.
+  const hasToken = config.token.trim().length > 0;
+  const cookieMode = oidc && !hasToken;
+  const enabled = hasToken || (cookieMode && !!user);
 
   useEffect(() => {
     const client = clientRef.current!;
-    client.authProvider = oidc ? { oidc: true } : null;
+    client.authProvider = cookieMode ? { oidc: true } : null;
     if (enabled) {
       client.setConfig(config);
     } else {
@@ -88,7 +99,7 @@ function useHubClient(config: HubConnectionConfig): HubState {
       setConnected(false);
     }
     return () => client.disconnect();
-  }, [config.host, config.port, config.token, enabled, oidc]);
+  }, [config.host, config.port, config.token, enabled, cookieMode]);
 
   const client = clientRef.current;
 
@@ -160,6 +171,7 @@ function useHubClient(config: HubConnectionConfig): HubState {
     },
     sendToAgent: (agentId, text) => client.sendToAgent(agentId, text),
     removeAgent: (agentId) => client.removeAgent(agentId),
+    setAgentAudience: (agentId, audience) => client.setAgentAudience(agentId, audience),
     requestHistory: (filter) => client.requestHistory(filter),
   };
 }

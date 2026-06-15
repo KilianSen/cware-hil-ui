@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Loader2, QrCode, Settings2, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, QrCode, Settings2, TriangleAlert } from "lucide-react";
 import { useConnection } from "../hooks/useConnection";
 import { redeemPairingCode } from "../lib/pairing";
 import { BrandMark } from "../components/BrandMark";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
  * already-connected device, scan its QR (which loads this app already
  * connected), or — behind Advanced — point at a hub with a JIT-minted token.
  */
-export function Onboarding() {
+export function Onboarding({ onBack }: { onBack?: () => void }) {
   const { setConfig } = useConnection();
   const [code, setCode] = useState("");
   const [host, setHost] = useState("");
@@ -131,6 +131,17 @@ export function Onboarding() {
             <AdvancedConnect />
           )}
         </div>
+
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-muted-foreground hover:text-foreground mx-auto mt-4 flex items-center gap-1.5 text-xs"
+          >
+            <ArrowLeft className="size-3.5" />
+            Back to sign in
+          </button>
+        )}
 
         <VersionFooter />
       </div>

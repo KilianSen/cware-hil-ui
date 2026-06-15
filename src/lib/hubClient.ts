@@ -38,6 +38,16 @@ export interface HistoryResult {
   hasMore: boolean;
 }
 
+/**
+ * Agent + multi-user scoping fields. The pinned lib schema may predate these, so
+ * they're merged from the raw frame (like Identity) rather than the parsed agent.
+ */
+export type ScopedAgent = Agent & {
+  owner?: { subject?: string; email?: string };
+  audience?: string;
+  ownerGroups?: string[];
+};
+
 const MAX_BACKOFF_MS = 30_000;
 const BASE_BACKOFF_MS = 1_000;
 
@@ -52,7 +62,7 @@ const BASE_BACKOFF_MS = 1_000;
  */
 export class HubClient {
   readonly questions = new Map<string, Question>();
-  readonly agents = new Map<string, Agent>();
+  readonly agents = new Map<string, ScopedAgent>();
   /** Notification history, oldest-first; seeded from the snapshot on connect. */
   readonly notifications: Notification[] = [];
   /** Reverse-channel messages the human has sent agents (most recent last). */
@@ -125,6 +135,11 @@ export class HubClient {
   /** Remove an agent from the registry. */
   removeAgent(agentId: string): void {
     this.sendRaw({ type: "remove_agent", agentId });
+  }
+
+  /** Set who can see an agent ("everyone" | "private" | "group:<g>"). */
+  setAgentAudience(agentId: string, audience: string): void {
+    this.sendRaw({ type: "set_agent_audience", agentId, audience });
   }
 
   /**
@@ -207,13 +222,20 @@ export class HubClient {
     }
     // `you` (the authenticated principal) is read from the raw frame: the pinned
     // lib schema may predate it and would otherwise strip it during validation.
+    type RawScope = { owner?: ScopedAgent["owner"]; audience?: string; ownerGroups?: string[] };
     const rawObj = (() => {
       try {
-        return JSON.parse(raw) as { you?: Identity };
+        return JSON.parse(raw) as {
+          you?: Identity;
+          agents?: (RawScope & { agentId: string })[];
+          agent?: RawScope & { agentId: string };
+        };
       } catch {
         return {};
       }
     })();
+    const scopeOf = (r?: RawScope): RawScope =>
+      r ? { owner: r.owner, audience: r.audience, ownerGroups: r.ownerGroups } : {};
 
     // Sequence-gap detection (snapshot resets the baseline).
     if (msg.type === "snapshot") {
@@ -234,7 +256,10 @@ export class HubClient {
         this.serverProtocolVersion = msg.protocolVersion;
         this.you = rawObj.you ?? null;
         for (const q of msg.questions) this.questions.set(q.id, q);
-        for (const a of msg.agents) this.agents.set(a.agentId, a);
+        {
+          const rawByID = new Map((rawObj.agents ?? []).map((a) => [a.agentId, a]));
+          for (const a of msg.agents) this.agents.set(a.agentId, { ...a, ...scopeOf(rawByID.get(a.agentId)) });
+        }
         // Reconcile notification history: seed from the snapshot, de-duped by id.
         if (msg.notifications) {
           const seen = new Set(this.notifications.map((n) => n.id));
@@ -258,7 +283,7 @@ export class HubClient {
         this.onChange();
         break;
       case "agent_updated":
-        this.agents.set(msg.agent.agentId, msg.agent);
+        this.agents.set(msg.agent.agentId, { ...msg.agent, ...scopeOf(rawObj.agent) });
         this.onChange();
         break;
       case "agent_removed":

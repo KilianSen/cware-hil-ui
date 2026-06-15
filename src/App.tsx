@@ -51,8 +51,14 @@ function Gate() {
   const { config } = useConnection();
 
   if (mode === "loading") return <FullScreenSpinner />;
-  if (mode === "oidc" && !user) return <SignIn />;
-  if (mode === "token" && config.token.trim().length === 0) return <Onboarding />;
+
+  // A configured token connects directly — single-user, or a device paired into
+  // an OIDC hub that can't do SSO. Otherwise OIDC needs a signed-in user, and
+  // token mode needs onboarding.
+  const hasToken = config.token.trim().length > 0;
+  if (!hasToken && !(mode === "oidc" && user)) {
+    return mode === "oidc" ? <SignIn /> : <Onboarding />;
+  }
 
   return (
     <>

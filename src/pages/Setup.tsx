@@ -70,7 +70,11 @@ export function Setup() {
               n={n()}
               icon={SquareTerminal}
               title="Connect an agent"
-              desc="Add the MCP endpoint to any client. Each agent gets its own revocable token."
+              desc={
+                oidcMode
+                  ? "Add the MCP endpoint to any client. Agents you launch are yours and start private — set who can see them from the agent's row."
+                  : "Add the MCP endpoint to any client. Each agent gets its own revocable token."
+              }
             >
               <AgentConnect />
             </Step>
@@ -81,36 +85,36 @@ export function Setup() {
               title="Add another human"
               desc={
                 oidcMode
-                  ? "Teammates sign in with single sign-on."
+                  ? "People sign in with SSO; pair devices that can't."
                   : "Hand the dashboard to a phone, or connect another bridge client."
               }
             >
-              {oidcMode ? (
-                <p className="text-muted-foreground text-sm">
-                  Multi-user mode is on — share this dashboard's URL and teammates sign in via your
-                  identity provider. Grant admin by adding them to the configured group.
+              {oidcMode && (
+                <p className="text-muted-foreground mb-3 text-sm">
+                  Teammates just open this URL and sign in via your identity provider. For devices
+                  that <span className="text-foreground">can’t do SSO</span> (a shared display, an
+                  intranet box), pair one below — it connects as a non-admin and is revocable.
                 </p>
-              ) : (
-                <Tabs defaultValue="scan">
-                  <TabsList>
-                    <TabsTrigger value="scan">Scan QR</TabsTrigger>
-                    <TabsTrigger value="code">Pairing code</TabsTrigger>
-                    <TabsTrigger value="raw">Raw bridge</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="scan" className="mt-3">
-                    <PairingQr />
-                  </TabsContent>
-                  <TabsContent value="code" className="mt-3">
-                    <PairingCode />
-                  </TabsContent>
-                  <TabsContent value="raw" className="mt-3 space-y-2">
-                    <p className="text-muted-foreground text-sm">
-                      Open a WebSocket (token as a query param), then send a <Code>hello</Code> frame:
-                    </p>
-                    <CodeBlock code={`${bridgeUrl}?token=${encodeURIComponent(token)}`} />
-                  </TabsContent>
-                </Tabs>
               )}
+              <Tabs defaultValue="scan">
+                <TabsList>
+                  <TabsTrigger value="scan">Scan QR</TabsTrigger>
+                  <TabsTrigger value="code">Pairing code</TabsTrigger>
+                  <TabsTrigger value="raw">Raw bridge</TabsTrigger>
+                </TabsList>
+                <TabsContent value="scan" className="mt-3">
+                  <PairingQr />
+                </TabsContent>
+                <TabsContent value="code" className="mt-3">
+                  <PairingCode />
+                </TabsContent>
+                <TabsContent value="raw" className="mt-3 space-y-2">
+                  <p className="text-muted-foreground text-sm">
+                    Open a WebSocket (token as a query param), then send a <Code>hello</Code> frame:
+                  </p>
+                  <CodeBlock code={`${bridgeUrl}?token=${encodeURIComponent(token)}`} />
+                </TabsContent>
+              </Tabs>
             </Step>
           </div>
 
