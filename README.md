@@ -105,7 +105,9 @@ sharing a token:
 
 - **Login** uses Authorization Code + PKCE in the browser (public client, no secret); the
   hub verifies the ID token statelessly against the issuer's JWKS. Answers are attributed
-  to the signed-in user.
+  to the signed-in user. Sessions **auto-renew** via a refresh token (the app requests the
+  `offline_access` scope), so the issuer's public client must be allowed to issue refresh
+  tokens; if it can't, the session simply drops to the sign-in screen on expiry.
 - **Access:** any authenticated user from the configured issuer can use the dashboard —
   so point it at a **private/dedicated** issuer. A configurable **group claim** grants
   **admin**; the master token is an admin break-glass.

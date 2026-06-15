@@ -39,10 +39,14 @@ function buildManager(cfg: OIDCPublicConfig): UserManager {
     client_id: cfg.clientId!,
     redirect_uri: REDIRECT_URI(),
     response_type: "code",
-    scope: "openid profile email",
-    // Silent renew needs a dedicated callback page we don't ship; instead we drop
-    // the session on expiry and re-prompt sign-in (predictable, no hidden iframe).
-    automaticSilentRenew: false,
+    // offline_access requests a refresh token, so renewal is a direct
+    // token-endpoint call — no hidden iframe or silent-callback page.
+    scope: "openid profile email offline_access",
+    // Auto-renew the token shortly before it expires (and on demand via
+    // getIdToken). If the issuer doesn't grant refresh tokens, renewal fails
+    // gracefully and the session drops to the sign-in screen on expiry.
+    automaticSilentRenew: true,
+    accessTokenExpiringNotificationTimeInSeconds: 60,
     // Survive reloads / multiple tabs.
     userStore: new WebStorageStateStore({ store: window.localStorage }),
   });
@@ -83,9 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         const mgr = buildManager(cfg);
         mgrRef.current = mgr;
+        // Fires on initial load AND after each successful auto-renewal — so the
+        // freshest token is always in state (and getIdToken returns it).
         mgr.events.addUserLoaded((u) => setUser(u));
         mgr.events.addUserUnloaded(() => setUser(null));
-        // On expiry, drop the session → the Gate falls back to the sign-in screen.
+        // Only reached if renewal failed/unavailable: drop the session so the
+        // Gate falls back to the sign-in screen.
         mgr.events.addAccessTokenExpired(() => void mgr.removeUser());
 
         try {
@@ -128,9 +135,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getIdToken = useCallback(async () => {
     const mgr = mgrRef.current;
     if (!mgr) return null;
-    const u = (await mgr.getUser()) ?? null;
-    if (!u || u.expired) return null;
-    return u.id_token ?? null;
+    let u = await mgr.getUser();
+    // Renew on demand if expired (e.g. a bridge reconnect or admin call right at
+    // the expiry boundary) — keeps actions working without forcing a re-login.
+    if (u && u.expired) {
+      try {
+        u = await mgr.signinSilent();
+      } catch {
+        u = null;
+      }
+    }
+    return u && !u.expired ? (u.id_token ?? null) : null;
   }, []);
 
   const value = useMemo<AuthContextValue>(
