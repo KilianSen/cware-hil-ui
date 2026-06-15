@@ -122,7 +122,7 @@ export function ConnectionSettings() {
               value={token}
               onChange={(e) => setToken(e.target.value)}
               type={showToken ? "text" : "password"}
-              placeholder="bearer token"
+              placeholder="client token (cc-hitl token --new)"
               autoComplete="off"
               spellCheck={false}
               className="pr-9 font-mono text-[13px]"

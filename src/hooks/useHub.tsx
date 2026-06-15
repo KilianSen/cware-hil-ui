@@ -9,15 +9,20 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import type { Agent, Answer, HistoryFilter, Notification, Question } from "cware-hil-lib";
-import { HubClient, type HubConnectionConfig, type HistoryResult } from "../lib/hubClient";
+import { HubClient, type HubConnectionConfig, type HistoryResult, type Identity } from "../lib/hubClient";
 import { useConnection } from "./useConnection";
 import { useSettings } from "./useSettings";
+import { useAuth } from "./useAuth";
 import { osNotify, playBeep } from "../lib/alerts";
 
 export interface HubState {
   connected: boolean;
   /** True once a token is set and we are attempting to connect. */
   enabled: boolean;
+  /** The authenticated principal for this connection (null until connected). */
+  you: Identity | null;
+  /** Whether this principal may perform admin-gated actions (always true in single-user mode). */
+  isAdmin: boolean;
   questions: Question[];
   agents: Agent[];
   /** Ephemeral toast queue (live notifications since page load). */
@@ -48,6 +53,8 @@ function useHubClient(config: HubConnectionConfig): HubState {
   const [connected, setConnected] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { settings } = useSettings();
+  const { mode, user, getIdToken } = useAuth();
+  const oidc = mode === "oidc";
   // Keep the latest settings readable from client callbacks without re-binding them.
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -67,10 +74,13 @@ function useHubClient(config: HubConnectionConfig): HubState {
     clientRef.current = client;
   }
 
-  const enabled = config.token.trim().length > 0;
+  // In OIDC mode we connect once a user is signed in (auth via the ID token); in
+  // single-user mode, once a token is configured.
+  const enabled = oidc ? !!user : config.token.trim().length > 0;
 
   useEffect(() => {
     const client = clientRef.current!;
+    client.authProvider = oidc ? { oidc: true, getIdToken } : null;
     if (enabled) {
       client.setConfig(config);
     } else {
@@ -78,7 +88,7 @@ function useHubClient(config: HubConnectionConfig): HubState {
       setConnected(false);
     }
     return () => client.disconnect();
-  }, [config.host, config.port, config.token, enabled]);
+  }, [config.host, config.port, config.token, enabled, oidc, getIdToken]);
 
   const client = clientRef.current;
 
@@ -118,6 +128,10 @@ function useHubClient(config: HubConnectionConfig): HubState {
   return {
     connected,
     enabled,
+    you: connected ? client.you : null,
+    // Single-user mode: everyone is admin (preserves existing behavior). OIDC:
+    // gated by the server-reported principal.
+    isAdmin: oidc ? (connected ? (client.you?.admin ?? false) : false) : true,
     questions,
     agents,
     notifications,

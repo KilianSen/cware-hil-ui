@@ -1,10 +1,14 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Command, Monitor, Moon, Sun } from "lucide-react";
-import { ConnectionProvider } from "./hooks/useConnection";
+import { Command, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { ConnectionProvider, useConnection } from "./hooks/useConnection";
 import { SettingsProvider, useSettings } from "./hooks/useSettings";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { HubProvider } from "./hooks/useHub";
 import { useHashRoute } from "./hooks/useHashRoute";
+import { Onboarding } from "./pages/Onboarding";
+import { SignIn } from "./pages/SignIn";
+import { Loader2 } from "lucide-react";
 import { ConnectionStatus } from "./components/ConnectionStatus";
 import { CommandPalette, openCommandPalette } from "./components/CommandPalette";
 import { OfflineBanner } from "./components/OfflineBanner";
@@ -23,13 +27,47 @@ export function App() {
     <ConnectionProvider>
       <SettingsProvider>
         <ThemeSync />
-        <HubProvider>
-          <Shell />
-          <CommandPalette />
-          <Toasts />
-        </HubProvider>
+        <AuthProvider>
+          <HubProvider>
+            <Gate />
+          </HubProvider>
+        </AuthProvider>
       </SettingsProvider>
     </ConnectionProvider>
+  );
+}
+
+/**
+ * Routes to the right entry screen based on the hub's auth mode:
+ *   - loading: still resolving /config.
+ *   - oidc:    sign-in until a user is present, then the dashboard.
+ *   - token:   first-run onboarding until a token is configured, then the dashboard.
+ *
+ * Token-mode gating is purely on token presence, so a failing-but-configured
+ * connection stays on the dashboard (Setup surfaces the reachability hint).
+ */
+function Gate() {
+  const { mode, user } = useAuth();
+  const { config } = useConnection();
+
+  if (mode === "loading") return <FullScreenSpinner />;
+  if (mode === "oidc" && !user) return <SignIn />;
+  if (mode === "token" && config.token.trim().length === 0) return <Onboarding />;
+
+  return (
+    <>
+      <Shell />
+      <CommandPalette />
+      <Toasts />
+    </>
+  );
+}
+
+function FullScreenSpinner() {
+  return (
+    <div className="text-muted-foreground flex min-h-full items-center justify-center">
+      <Loader2 className="size-5 animate-spin" />
+    </div>
   );
 }
 
@@ -105,6 +143,7 @@ function Header({ active }: { active: string }) {
 
       <div className="ml-auto flex items-center gap-1">
         <ConnectionStatus href="#/setup" />
+        <UserMenu />
         <ThemeButton />
         <Button
           type="button"
@@ -150,6 +189,32 @@ function Nav({ active }: { active: string }) {
         );
       })}
     </nav>
+  );
+}
+
+/** Signed-in user + sign-out, shown only in OIDC (multi-user) mode. */
+function UserMenu() {
+  const { mode, user, signOut } = useAuth();
+  if (mode !== "oidc" || !user) return null;
+  const profile = user.profile as { email?: string; name?: string; preferred_username?: string };
+  const who = profile.email ?? profile.name ?? profile.preferred_username ?? "signed in";
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-muted-foreground hidden max-w-[160px] truncate text-xs sm:inline" title={who}>
+        {who}
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={signOut}
+        aria-label="Sign out"
+        title="Sign out"
+        className="text-muted-foreground"
+      >
+        <LogOut className="size-4" />
+      </Button>
+    </div>
   );
 }
 

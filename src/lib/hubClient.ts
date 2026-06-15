@@ -15,6 +15,24 @@ export interface HubConnectionConfig {
   token: string;
 }
 
+/** The authenticated principal the hub reports in the snapshot (see lib Identity). */
+export interface Identity {
+  subject?: string;
+  email?: string;
+  name?: string;
+  admin: boolean;
+}
+
+/**
+ * How a human authenticates to the bridge. In single-user mode the static bearer
+ * token is used; in OIDC mode `getIdToken` supplies a fresh ID token per
+ * (re)connect, sent in the `hello` frame instead of a `?token=` query param.
+ */
+export interface AuthProvider {
+  oidc: boolean;
+  getIdToken: () => Promise<string | null>;
+}
+
 export interface HistoryResult {
   questions: Question[];
   hasMore: boolean;
@@ -43,7 +61,12 @@ export class HubClient {
   serverVersion: string | null = null;
   /** Bridge protocol version the hub speaks, from the snapshot. */
   serverProtocolVersion: number | null = null;
+  /** The authenticated principal for this connection (multi-user / admin gating). */
+  you: Identity | null = null;
   connected = false;
+
+  /** Auth source — set by the consumer. null = use the static config token. */
+  authProvider: AuthProvider | null = null;
 
   /** UI hooks — set by the consumer. */
   onChange: () => void = () => {};
@@ -141,7 +164,12 @@ export class HubClient {
     // uses the explicit host:port.
     const authority =
       host === window.location.hostname ? window.location.host : `${host}:${port}`;
-    const url = `${scheme}://${authority}/bridge?token=${encodeURIComponent(token)}`;
+    const oidc = this.authProvider?.oidc ?? false;
+    // OIDC: authenticate in the hello frame (no token in the URL). Single-user:
+    // the bearer token rides as a query param (the WS upgrade can't set headers).
+    const url = oidc
+      ? `${scheme}://${authority}/bridge`
+      : `${scheme}://${authority}/bridge?token=${encodeURIComponent(token)}`;
     let ws: WebSocket;
     try {
       ws = new WebSocket(url);
@@ -151,11 +179,21 @@ export class HubClient {
     }
     this.ws = ws;
 
-    ws.onopen = () => {
+    ws.onopen = async () => {
+      let idToken: string | undefined;
+      if (oidc) {
+        idToken = (await this.authProvider!.getIdToken()) ?? undefined;
+        if (!idToken) {
+          // Signed out / token unrenewable — drop and let reconnect retry.
+          this.ws?.close();
+          return;
+        }
+      }
       this.sendRaw({
         type: "hello",
         clientId: this.clientId,
-        token: this.cfg.token,
+        token: oidc ? "" : this.cfg.token,
+        idToken,
         protocolVersion: BRIDGE_PROTOCOL_VERSION,
       });
     };
@@ -176,6 +214,15 @@ export class HubClient {
     } catch {
       return;
     }
+    // `you` (the authenticated principal) is read from the raw frame: the pinned
+    // lib schema may predate it and would otherwise strip it during validation.
+    const rawObj = (() => {
+      try {
+        return JSON.parse(raw) as { you?: Identity };
+      } catch {
+        return {};
+      }
+    })();
 
     // Sequence-gap detection (snapshot resets the baseline).
     if (msg.type === "snapshot") {
@@ -194,6 +241,7 @@ export class HubClient {
         this.agents.clear();
         this.serverVersion = msg.serverVersion ?? null;
         this.serverProtocolVersion = msg.protocolVersion;
+        this.you = rawObj.you ?? null;
         for (const q of msg.questions) this.questions.set(q.id, q);
         for (const a of msg.agents) this.agents.set(a.agentId, a);
         // Reconcile notification history: seed from the snapshot, de-duped by id.

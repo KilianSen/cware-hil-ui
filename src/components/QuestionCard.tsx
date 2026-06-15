@@ -30,7 +30,7 @@ export function QuestionCard({
   agentLabel?: string;
   selected?: boolean;
 }) {
-  const { submitAnswer, cancelQuestion, connected } = useHub();
+  const { submitAnswer, cancelQuestion, connected, isAdmin } = useHub();
   useNow(); // keep the "Xm ago" timestamp fresh
   const send = (a: Answer) => submitAnswer(a);
   const now = () => new Date().toISOString();
@@ -119,16 +119,20 @@ export function QuestionCard({
         ) : (
           <span />
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
-          onClick={() => cancelQuestion(question.id)}
-          aria-label="Dismiss question"
-        >
-          <X className="size-3.5" /> Dismiss
-        </Button>
+        {isAdmin ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => cancelQuestion(question.id)}
+            aria-label="Dismiss question"
+          >
+            <X className="size-3.5" /> Dismiss
+          </Button>
+        ) : (
+          <span />
+        )}
       </div>
     </motion.div>
   );

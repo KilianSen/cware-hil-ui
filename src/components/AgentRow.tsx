@@ -21,7 +21,7 @@ const STATUS: Record<Agent["status"], { tone: LedTone; pulse?: boolean; tw: stri
 };
 
 export function AgentRow({ agent }: { agent: Agent }) {
-  const { sendToAgent, removeAgent } = useHub();
+  const { sendToAgent, removeAgent, isAdmin } = useHub();
   const [composing, setComposing] = useState(false);
   const [text, setText] = useState("");
   useNow(); // keep "last seen" fresh
@@ -117,16 +117,18 @@ export function AgentRow({ agent }: { agent: Agent }) {
             >
               <MessageSquarePlus className="size-3.5" /> Message
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-destructive h-7 px-2"
-              onClick={() => removeAgent(agent.agentId)}
-              aria-label={`Remove agent ${agent.label ?? agent.agentId.slice(0, 8)}`}
-            >
-              <Trash2 className="size-3.5" /> Remove
-            </Button>
+            {isAdmin && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive h-7 px-2"
+                onClick={() => removeAgent(agent.agentId)}
+                aria-label={`Remove agent ${agent.label ?? agent.agentId.slice(0, 8)}`}
+              >
+                <Trash2 className="size-3.5" /> Remove
+              </Button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
